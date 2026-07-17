@@ -1,608 +1,707 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
-import { Heart, Send, ArrowLeft, Sparkles, MessageCircle, Leaf, Feather } from "lucide-react";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Zen Jar — a quiet place to leave a thought</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext y='20' font-size='20'%3E%F0%9F%8D%83%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F7F4EC;
+    --paper-deep: #EDE7D8;
+    --sage: #A8C0A2;
+    --sage-soft: #DCE7D8;
+    --sage-line: #89A583;
+    --blue: #B7CFDA;
+    --blue-soft: #DEE9EE;
+    --sand: #E7DCC3;
+    --ink: #3E3C35;
+    --ink-soft: #8A867B;
+    --ink-faint: #B4AFA2;
+    --amber: #DDAE72;
+    --amber-deep: #B8874C;
+    --white: #FFFFFF;
+    --font-display: "Fraunces", ui-serif, Georgia, serif;
+    --font-body: "Karla", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
 
-const C = {
-  paper: "#F7F4EC",
-  paperDeep: "#EDE7D8",
-  sage: "#A8C0A2",
-  sageSoft: "#DCE7D8",
-  sageLine: "#89A583",
-  blue: "#B7CFDA",
-  blueSoft: "#DEE9EE",
-  sand: "#E7DCC3",
-  ink: "#3E3C35",
-  inkSoft: "#8A867B",
-  inkFaint: "#B4AFA2",
-  amber: "#DDAE72",
-  amberDeep: "#B8874C",
-  white: "#FFFFFF",
-};
+  * { box-sizing: border-box; }
 
-const FONTS = {
-  display: '"Fraunces", ui-serif, Georgia, serif',
-  body: '"Karla", ui-sans-serif, system-ui, sans-serif',
-  mono: '"IBM Plex Mono", ui-monospace, monospace',
-};
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    background:
+      radial-gradient(circle at 50% -10%, rgba(222,233,238,0.55), transparent 55%),
+      radial-gradient(circle at 85% 30%, rgba(220,231,216,0.55), transparent 50%),
+      var(--paper);
+    font-family: var(--font-body);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
 
-const OPENERS = [
-  "Some days", "Lately", "Tonight", "This morning", "After a long week",
-  "In the middle of everything", "Quietly", "Somewhere in here",
-  "Without meaning to", "Even now",
-];
+  button, textarea { font-family: inherit; }
 
-const FRAGMENTS = [
-  "I remembered how much a small kindness can carry.",
-  "I let myself rest instead of finishing the list.",
-  "I missed someone I haven't spoken to in years.",
-  "I felt proud of getting through today, nothing more.",
-  "I noticed the light change and it stopped me for a second.",
-  "I forgave myself for something small and it felt enormous.",
-  "I wondered if anyone else feels this unsure sometimes.",
-  "I laughed at something dumb and it fixed my whole mood.",
-  "I wanted to tell a stranger they're doing better than they think.",
-  "I sat with a feeling instead of trying to fix it.",
-  "I realized I've been carrying something I don't need anymore.",
-  "I was kind to myself for once, and it felt unfamiliar.",
-  "I thought about how far I've come without noticing.",
-  "I decided today didn't have to be productive to matter.",
-  "I caught myself smiling at nothing in particular.",
-  "I let a plan fall apart and it was okay.",
-  "I said something honest and nobody flinched.",
-  "I chose rest over guilt, just this once.",
-  "I noticed how quiet my mind gets right before sleep.",
-  "I felt grateful for a person who checked in on me.",
-  "I wrote something down just so it wasn't only in my head.",
-  "I forgave a version of myself from a while back.",
-  "I asked for help and it didn't feel like weakness.",
-  "I watched the rain and didn't think about anything else.",
-  "I was surprised by how okay I felt, all things considered.",
-  "I held a door for someone and it made my whole day better.",
-  "I let go of a grudge I'd been carrying too long.",
-  "I noticed I'm gentler with others than I am with myself.",
-  "I felt the ordinary weight of just being tired.",
-  "I found a little hope in a very small thing.",
-];
+  .app { min-height: 100vh; display: flex; flex-direction: column; }
 
-const TIME_LABELS = [
-  "just now", "2 minutes ago", "8 minutes ago", "an hour ago", "this morning",
-  "yesterday", "2 days ago", "3 days ago", "last week", "a moment ago",
-];
+  /* ---------- top bar ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 34px 24px 8px;
+  }
+  .wordmark { display: flex; align-items: center; gap: 8px; user-select: none; }
+  .wordmark svg { color: var(--sage-line); }
+  .wordmark span {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 19px;
+    color: var(--ink);
+  }
 
-const MESSAGE_POOL = OPENERS.flatMap((opener, oi) =>
-  FRAGMENTS.map((fragment, fi) => {
-    const n = oi * FRAGMENTS.length + fi;
-    return {
-      id: String(1000 + n),
-      text: `${opener}, ${fragment.charAt(0).toLowerCase()}${fragment.slice(1)}`,
-      left: TIME_LABELS[n % TIME_LABELS.length],
-    };
-  })
-);
+  /* ---------- screens ---------- */
+  .screen { display: none; padding: 24px 24px 72px; animation: fadeUp 0.5s ease both; }
+  .screen.active { display: block; }
+  .screen-narrow { max-width: 480px; margin: 0 auto; }
+  .screen-medium { max-width: 560px; margin: 0 auto; }
 
-function pickRandomMessage() {
-  return MESSAGE_POOL[Math.floor(Math.random() * MESSAGE_POOL.length)];
-}
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    padding: 0;
+    margin-bottom: 24px;
+  }
+  .back-link:hover { color: var(--ink); }
 
-const SEED_REPLIES = [
-  { id: "r1", author: "a stranger", text: "Quiet nights are their own kind of arrival. I hope it stays a while.", karma: 4, ai: false },
-];
+  /* ---------- home ---------- */
+  #screen-home { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  #screen-home.active { display: flex; }
 
-const ZEN_AI_LINES = [
-  "That kind of quiet is worth noticing, not rushing past. Thank you for sharing it here.",
-  "Enough is a good place to rest tonight. Wishing you a gentle morning after this one.",
-  "It sounds like you gave yourself some room to breathe. That matters more than it seems.",
-];
+  .jar-wrap { position: relative; width: 232px; height: 268px; margin: 0 auto; }
+  .jar-glow {
+    position: absolute;
+    width: 260px; height: 260px;
+    left: -14px; top: 30px;
+    border-radius: 999px;
+    filter: blur(48px);
+    background: radial-gradient(circle, rgba(221,174,114,0.33), transparent 70%);
+    animation: glow 4.5s ease-in-out infinite;
+  }
+  .jar-lid {
+    position: absolute;
+    left: 50%; top: 0;
+    width: 92px; height: 20px;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--sand), var(--amber-deep));
+    border: 1px solid var(--amber-deep);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+  .jar-neck {
+    position: absolute;
+    left: 50%; top: 15px;
+    width: 76px; height: 26px;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, rgba(222,233,238,0.8), rgba(255,255,255,0.4));
+    border-left: 1px solid var(--white);
+    border-right: 1px solid var(--white);
+    border-top: 1px solid var(--white);
+  }
+  .jar-body {
+    position: absolute;
+    left: 50%; top: 36px;
+    width: 224px; height: 228px;
+    transform: translateX(-50%);
+    border-radius: 24px;
+    overflow: hidden;
+    background: linear-gradient(155deg, rgba(255,255,255,0.7) 0%, rgba(222,233,238,0.6) 45%, rgba(220,231,216,0.6) 100%);
+    border: 1px solid var(--white);
+    backdrop-filter: blur(2px);
+    box-shadow: 0 20px 40px -18px rgba(62,60,53,0.25);
+  }
+  .jar-highlight {
+    position: absolute;
+    width: 70px; height: 180px;
+    left: 22px; top: 10px;
+    border-radius: 999px;
+    filter: blur(20px);
+    background: rgba(255,255,255,0.5);
+  }
+  .jar-particle {
+    position: absolute;
+    border-radius: 6px;
+    border: 1px solid var(--white);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    animation: bob linear infinite;
+    transition: opacity 0.6s ease;
+  }
+  .jar-particle.dim { opacity: 0.25 !important; }
+  .jar-rise {
+    position: absolute;
+    left: 44%; bottom: 20px;
+    width: 26px; height: 18px;
+    border-radius: 6px;
+    background: var(--white);
+    border: 1px solid var(--amber-deep);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+    animation: riseOut 1.1s ease-out forwards;
+  }
 
-function useParticles(count, seed = 1) {
-  return useMemo(() => {
+  .tagline {
+    margin-top: 32px;
+    max-width: 300px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 19px;
+    line-height: 1.5;
+  }
+  .subtagline {
+    margin-top: 8px;
+    max-width: 300px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+
+  .actions { margin-top: 32px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-primary {
+    color: var(--white);
+    background: linear-gradient(180deg, var(--amber), var(--amber-deep));
+    box-shadow: 0 8px 20px -8px rgba(184,135,76,0.55);
+  }
+  .btn-secondary {
+    color: var(--ink);
+    background: var(--white);
+    border: 1px solid var(--paper-deep);
+  }
+  .btn-pill {
+    color: var(--ink);
+    background: var(--paper);
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+  .btn-pill.filled { color: var(--white); background: var(--amber-deep); }
+  .btn-pill svg { flex-shrink: 0; }
+
+  /* ---------- message screen ---------- */
+  .message-card {
+    background: var(--white);
+    border: 1px solid var(--paper-deep);
+    border-radius: 24px;
+    padding: 28px;
+    box-shadow: 0 4px 20px -12px rgba(62,60,53,0.15);
+  }
+  .message-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    color: var(--ink-faint);
+  }
+  .message-text {
+    font-family: var(--font-display);
+    font-size: 21px;
+    line-height: 1.6;
+    color: var(--ink);
+    margin: 0;
+  }
+  .message-actions { margin-top: 24px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  .reply-box { margin-top: 20px; animation: fadeUp 0.4s ease both; }
+  .reply-box textarea {
+    width: 100%;
+    resize: none;
+    border-radius: 16px;
+    padding: 12px;
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--paper-deep);
+  }
+  .reply-box textarea:focus-visible { outline: 2px solid var(--sage); outline-offset: 2px; }
+  .reply-box-footer { margin-top: 8px; display: flex; align-items: center; justify-content: space-between; }
+  .reply-count { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); }
+
+  .thread { margin-top: 24px; padding-left: 16px; border-left: 2px solid var(--paper-deep); display: flex; flex-direction: column; gap: 12px; }
+  .reply-card {
+    background: var(--white);
+    border: 1px solid var(--paper-deep);
+    border-radius: 16px;
+    padding: 16px;
+    animation: fadeUp 0.4s ease both;
+  }
+  .reply-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .reply-author { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; color: var(--ink-faint); }
+  .reply-author.ai { color: var(--amber-deep); }
+  .reply-karma { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-faint); }
+  .reply-karma span { font-family: var(--font-mono); font-size: 10px; }
+  .reply-text { font-size: 14px; line-height: 1.6; margin: 0; }
+
+  /* ---------- drop screen ---------- */
+  .drop-title { font-family: var(--font-display); font-style: italic; font-size: 26px; margin: 0; }
+  .drop-sub { margin-top: 8px; margin-bottom: 24px; font-size: 13px; color: var(--ink-soft); line-height: 1.6; }
+  .drop-card { background: var(--white); border: 1px solid var(--paper-deep); border-radius: 24px; padding: 24px; box-shadow: 0 4px 20px -12px rgba(62,60,53,0.15); }
+  .drop-card textarea {
+    width: 100%;
+    resize: none;
+    border: none;
+    background: transparent;
+    font-family: var(--font-display);
+    font-size: 17px;
+    color: var(--ink);
+    line-height: 1.6;
+  }
+  .drop-card textarea:focus-visible { outline: none; }
+  .drop-footer { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; }
+  .drop-count { font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); }
+  .drop-count.warn { color: var(--amber-deep); }
+
+  .drop-confirm {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background: var(--white);
+    border: 1px solid var(--paper-deep);
+    border-radius: 24px;
+    padding: 44px 24px;
+    animation: fadeUp 0.4s ease both;
+  }
+  .drop-confirm.active { display: flex; }
+  .drop-confirm-bubble {
+    width: 46px; height: 30px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--amber), var(--amber-deep));
+    margin-bottom: 16px;
+    animation: riseOut 1.4s ease-out forwards;
+  }
+  .drop-confirm-title { font-family: var(--font-display); font-style: italic; font-size: 18px; margin: 0; }
+  .drop-confirm-sub { margin-top: 4px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); }
+
+  /* ---------- keyframes ---------- */
+  @keyframes bob {
+    0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); }
+    50% { transform: translateY(-10px) rotate(var(--rot, 0deg)); }
+  }
+  @keyframes riseOut {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    60% { transform: translateY(-90px) scale(1.08); opacity: 1; }
+    100% { transform: translateY(-140px) scale(0.9); opacity: 0; }
+  }
+  @keyframes pulseHeart {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35); }
+    100% { transform: scale(1); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes glow {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 0.85; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  @media (max-width: 420px) {
+    .message-text { font-size: 19px; }
+    .drop-title { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="wordmark">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+      <span>zen jar</span>
+    </div>
+  </div>
+
+  <!-- ============ HOME ============ -->
+  <section id="screen-home" class="screen active">
+    <div class="jar-wrap" id="jar">
+      <div class="jar-glow"></div>
+      <div class="jar-lid"></div>
+      <div class="jar-neck"></div>
+      <div class="jar-body">
+        <div class="jar-highlight"></div>
+        <div id="jar-particles"></div>
+      </div>
+    </div>
+
+    <p class="tagline">A quiet place to leave a thought, and find one waiting.</p>
+    <p class="subtagline" id="jar-count">1,204 thoughts are resting in the jar right now.</p>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="showScreen('drop')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg>
+        Drop a Thought
+      </button>
+      <button class="btn btn-secondary" id="pull-btn" onclick="handlePull()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sage-line)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/></svg>
+        <span id="pull-label">Pull a Message</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ MESSAGE ============ -->
+  <section id="screen-message" class="screen screen-narrow">
+    <button class="back-link" onclick="showScreen('home')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      back to the jar
+    </button>
+
+    <div class="message-card">
+      <div class="message-meta">
+        <span id="msg-id">MESSAGE NO. 1000</span>
+        <span id="msg-time">just now</span>
+      </div>
+      <p class="message-text" id="msg-text"></p>
+
+      <div class="message-actions">
+        <button class="btn-pill" style="display:inline-flex;align-items:center;gap:6px;border:none;cursor:pointer;" onclick="toggleReply()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-line)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          Reply anonymously
+        </button>
+        <button class="btn-pill" id="karma-btn" style="display:inline-flex;align-items:center;gap:6px;border:none;cursor:pointer;" onclick="giveKarma()">
+          <svg id="karma-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span id="karma-count">12</span>
+        </button>
+        <button class="btn-pill" id="ai-btn" style="display:inline-flex;align-items:center;gap:6px;border:none;cursor:pointer;" onclick="askZenAI()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>
+          Ask Zen AI to reply
+        </button>
+      </div>
+
+      <div class="reply-box" id="reply-box" style="display:none;">
+        <textarea id="reply-input" rows="3" maxlength="300" placeholder="offer a few kind words, gently…" oninput="updateReplyCount()"></textarea>
+        <div class="reply-box-footer">
+          <span class="reply-count" id="reply-count">0/300</span>
+          <button class="btn btn-primary" style="padding:10px 20px;" onclick="sendReply()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Send reply
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="thread" id="thread"></div>
+  </section>
+
+  <!-- ============ DROP ============ -->
+  <section id="screen-drop" class="screen screen-narrow">
+    <button class="back-link" onclick="showScreen('home')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      back to the jar
+    </button>
+
+    <h1 class="drop-title">Leave a thought</h1>
+    <p class="drop-sub">No name, no history attached. Just the thought itself, released into the jar for someone to find.</p>
+
+    <div class="drop-card" id="drop-form">
+      <textarea id="drop-input" rows="6" maxlength="300" placeholder="what's on your mind, quietly…" oninput="updateDropCount()"></textarea>
+      <div class="drop-footer">
+        <span class="drop-count" id="drop-count">0/300</span>
+        <button class="btn btn-primary" id="release-btn" disabled onclick="releaseMessage()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg>
+          Release into the Jar
+        </button>
+      </div>
+    </div>
+
+    <div class="drop-confirm" id="drop-confirm">
+      <div class="drop-confirm-bubble"></div>
+      <p class="drop-confirm-title">Your thought has joined the jar.</p>
+      <p class="drop-confirm-sub">someone will find it soon</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  /* ---------------- message pool: 10 openers × 30 fragments = 300 ---------------- */
+  const OPENERS = [
+    "Some days", "Lately", "Tonight", "This morning", "After a long week",
+    "In the middle of everything", "Quietly", "Somewhere in here",
+    "Without meaning to", "Even now",
+  ];
+
+  const FRAGMENTS = [
+    "I remembered how much a small kindness can carry.",
+    "I let myself rest instead of finishing the list.",
+    "I missed someone I haven't spoken to in years.",
+    "I felt proud of getting through today, nothing more.",
+    "I noticed the light change and it stopped me for a second.",
+    "I forgave myself for something small and it felt enormous.",
+    "I wondered if anyone else feels this unsure sometimes.",
+    "I laughed at something dumb and it fixed my whole mood.",
+    "I wanted to tell a stranger they're doing better than they think.",
+    "I sat with a feeling instead of trying to fix it.",
+    "I realized I've been carrying something I don't need anymore.",
+    "I was kind to myself for once, and it felt unfamiliar.",
+    "I thought about how far I've come without noticing.",
+    "I decided today didn't have to be productive to matter.",
+    "I caught myself smiling at nothing in particular.",
+    "I let a plan fall apart and it was okay.",
+    "I said something honest and nobody flinched.",
+    "I chose rest over guilt, just this once.",
+    "I noticed how quiet my mind gets right before sleep.",
+    "I felt grateful for a person who checked in on me.",
+    "I wrote something down just so it wasn't only in my head.",
+    "I forgave a version of myself from a while back.",
+    "I asked for help and it didn't feel like weakness.",
+    "I watched the rain and didn't think about anything else.",
+    "I was surprised by how okay I felt, all things considered.",
+    "I held a door for someone and it made my whole day better.",
+    "I let go of a grudge I'd been carrying too long.",
+    "I noticed I'm gentler with others than I am with myself.",
+    "I felt the ordinary weight of just being tired.",
+    "I found a little hope in a very small thing.",
+  ];
+
+  const TIME_LABELS = [
+    "just now", "2 minutes ago", "8 minutes ago", "an hour ago", "this morning",
+    "yesterday", "2 days ago", "3 days ago", "last week", "a moment ago",
+  ];
+
+  const MESSAGE_POOL = [];
+  OPENERS.forEach((opener, oi) => {
+    FRAGMENTS.forEach((fragment, fi) => {
+      const n = oi * FRAGMENTS.length + fi;
+      MESSAGE_POOL.push({
+        id: String(1000 + n),
+        text: opener + ", " + fragment.charAt(0).toLowerCase() + fragment.slice(1),
+        left: TIME_LABELS[n % TIME_LABELS.length],
+      });
+    });
+  });
+
+  function pickRandomMessage() {
+    return MESSAGE_POOL[Math.floor(Math.random() * MESSAGE_POOL.length)];
+  }
+
+  const ZEN_AI_LINES = [
+    "That kind of quiet is worth noticing, not rushing past. Thank you for sharing it here.",
+    "Enough is a good place to rest tonight. Wishing you a gentle morning after this one.",
+    "It sounds like you gave yourself some room to breathe. That matters more than it seems.",
+  ];
+
+  /* ---------------- jar particles ---------------- */
+  function seededRandom(seed) {
     let s = seed;
-    const rand = () => {
-      s = (s * 9301 + 49297) % 233280;
-      return s / 233280;
-    };
-    return Array.from({ length: count }).map((_, i) => ({
-      id: i,
-      left: 14 + rand() * 72,
-      top: 18 + rand() * 68,
-      size: 16 + rand() * 14,
-      rot: -18 + rand() * 36,
-      dur: 5 + rand() * 4,
-      delay: rand() * 4,
-      tone: i % 3 === 0 ? C.blueSoft : i % 3 === 1 ? C.sageSoft : C.white,
-    }));
-  }, [count, seed]);
-}
+    return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  }
 
-function GlobalStyle() {
-  return (
-    <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  function renderJarParticles() {
+    const container = document.getElementById("jar-particles");
+    const rand = seededRandom(4);
+    const tones = ["var(--blue-soft)", "var(--sage-soft)", "var(--white)"];
+    for (let i = 0; i < 9; i++) {
+      const el = document.createElement("div");
+      const size = 16 + rand() * 14;
+      const rot = -18 + rand() * 36;
+      const dur = 5 + rand() * 4;
+      const delay = rand() * 4;
+      el.className = "jar-particle";
+      el.style.left = (14 + rand() * 72) + "%";
+      el.style.top = (18 + rand() * 68) + "%";
+      el.style.width = size + "px";
+      el.style.height = (size * 0.7) + "px";
+      el.style.background = tones[i % 3];
+      el.style.setProperty("--rot", rot + "deg");
+      el.style.transform = "rotate(" + rot + "deg)";
+      el.style.animationDuration = dur + "s";
+      el.style.animationDelay = delay + "s";
+      container.appendChild(el);
+    }
+  }
 
-      @keyframes bob {
-        0%, 100% { transform: translateY(0) rotate(var(--rot)); }
-        50% { transform: translateY(-10px) rotate(var(--rot)); }
-      }
-      @keyframes drift {
-        0% { transform: translate(0,0); }
-        33% { transform: translate(6px,-4px); }
-        66% { transform: translate(-4px,3px); }
-        100% { transform: translate(0,0); }
-      }
-      @keyframes riseOut {
-        0% { transform: translateY(0) scale(1); opacity: 1; }
-        60% { transform: translateY(-90px) scale(1.08); opacity: 1; }
-        100% { transform: translateY(-140px) scale(0.9); opacity: 0; }
-      }
-      @keyframes pulseHeart {
-        0% { transform: scale(1); }
-        40% { transform: scale(1.35); }
-        100% { transform: scale(1); }
-      }
-      @keyframes fadeUp {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      @keyframes glow {
-        0%, 100% { opacity: 0.55; }
-        50% { opacity: 0.85; }
-      }
-      .fade-up { animation: fadeUp 0.5s ease both; }
-      .zj-particle { animation: bob 6s ease-in-out infinite; }
+  /* ---------------- screen switching ---------------- */
+  function showScreen(name) {
+    document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+    document.getElementById("screen-" + name).classList.add("active");
+  }
 
-      @media (prefers-reduced-motion: reduce) {
-        .zj-particle, .fade-up, [style*="animation"] { animation: none !important; }
-      }
-    `}</style>
-  );
-}
-
-function Wordmark({ size = 18 }) {
-  return (
-    <div className="flex items-center gap-2 select-none">
-      <Leaf size={size} strokeWidth={1.5} color={C.sageLine} />
-      <span
-        style={{ fontFamily: FONTS.display, fontStyle: "italic", fontWeight: 500, color: C.ink, fontSize: size + 2 }}
-      >
-        zen jar
-      </span>
-    </div>
-  );
-}
-
-function TopBar() {
-  return (
-    <div className="w-full flex items-center justify-center px-6 sm:px-10 pt-8 pb-2">
-      <Wordmark />
-    </div>
-  );
-}
-
-function Jar({ pulling }) {
-  const particles = useParticles(9, 4);
-  return (
-    <div className="relative mx-auto" style={{ width: 232, height: 268 }}>
-      {/* ambient glow */}
-      <div
-        className="absolute rounded-full blur-3xl"
-        style={{
-          width: 260,
-          height: 260,
-          left: -14,
-          top: 30,
-          background: `radial-gradient(circle, ${C.amber}55, transparent 70%)`,
-          animation: "glow 4.5s ease-in-out infinite",
-        }}
-      />
-      {/* lid */}
-      <div
-        className="absolute left-1/2 rounded-full shadow-sm"
-        style={{
-          top: 0,
-          width: 92,
-          height: 20,
-          transform: "translateX(-50%)",
-          background: `linear-gradient(180deg, ${C.sand}, ${C.amberDeep})`,
-          border: `1px solid ${C.amberDeep}`,
-        }}
-      />
-      {/* neck */}
-      <div
-        className="absolute left-1/2"
-        style={{
-          top: 15,
-          width: 76,
-          height: 26,
-          transform: "translateX(-50%)",
-          background: `linear-gradient(180deg, ${C.blueSoft}cc, ${C.white}66)`,
-          borderLeft: `1px solid ${C.white}`,
-          borderRight: `1px solid ${C.white}`,
-          borderTop: `1px solid ${C.white}`,
-        }}
-      />
-      {/* body */}
-      <div
-        className="absolute left-1/2 rounded-3xl overflow-hidden shadow-xl"
-        style={{
-          top: 36,
-          width: 224,
-          height: 228,
-          transform: "translateX(-50%)",
-          background: `linear-gradient(155deg, ${C.white}b3 0%, ${C.blueSoft}99 45%, ${C.sageSoft}99 100%)`,
-          border: `1px solid ${C.white}`,
-          backdropFilter: "blur(2px)",
-        }}
-      >
-        {/* glass highlight */}
-        <div
-          className="absolute rounded-full blur-2xl"
-          style={{ width: 70, height: 180, left: 22, top: 10, background: `${C.white}80` }}
-        />
-        {/* floating messages */}
-        {particles.map((p) => (
-          <div
-            key={p.id}
-            className="zj-particle absolute rounded-md shadow-sm"
-            style={{
-              left: `${p.left}%`,
-              top: `${p.top}%`,
-              width: p.size,
-              height: p.size * 0.7,
-              background: p.tone,
-              border: `1px solid ${C.white}`,
-              "--rot": `${p.rot}deg`,
-              transform: `rotate(${p.rot}deg)`,
-              animationDuration: `${p.dur}s`,
-              animationDelay: `${p.delay}s`,
-              opacity: pulling ? 0.25 : 0.9,
-              transition: "opacity 0.6s ease",
-            }}
-          />
-        ))}
-        {/* rising particle when pulling */}
-        {pulling && (
-          <div
-            className="absolute rounded-md shadow-md"
-            style={{
-              left: "44%",
-              bottom: 20,
-              width: 26,
-              height: 18,
-              background: C.white,
-              border: `1px solid ${C.amberDeep}`,
-              animation: "riseOut 1.1s ease-out forwards",
-            }}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PrimaryButton({ children, onClick, icon: Icon, disabled }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="inline-flex items-center gap-2 px-6 py-3 rounded-full transition-transform duration-300 focus:outline-none focus:ring-2 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
-      style={{
-        fontFamily: FONTS.body,
-        fontWeight: 600,
-        fontSize: 14,
-        color: C.white,
-        background: `linear-gradient(180deg, ${C.amber}, ${C.amberDeep})`,
-        boxShadow: "0 8px 20px -8px rgba(184,135,76,0.55)",
-        ringColor: C.amber,
-      }}
-    >
-      {Icon && <Icon size={16} strokeWidth={2} />}
-      {children}
-    </button>
-  );
-}
-
-function SecondaryButton({ children, onClick, icon: Icon }) {
-  return (
-    <button
-      onClick={onClick}
-      className="inline-flex items-center gap-2 px-6 py-3 rounded-full transition-transform duration-300 focus:outline-none focus:ring-2 active:scale-[0.97]"
-      style={{
-        fontFamily: FONTS.body,
-        fontWeight: 600,
-        fontSize: 14,
-        color: C.ink,
-        background: C.white,
-        border: `1px solid ${C.paperDeep}`,
-        ringColor: C.sage,
-      }}
-    >
-      {Icon && <Icon size={16} strokeWidth={2} color={C.sageLine} />}
-      {children}
-    </button>
-  );
-}
-
-function HomeScreen({ setScreen, onPull }) {
-  const [pulling, setPulling] = useState(false);
-
-  const handlePull = () => {
+  /* ---------------- home / pull ---------------- */
+  let pulling = false;
+  function handlePull() {
     if (pulling) return;
-    setPulling(true);
+    pulling = true;
+    document.getElementById("pull-label").textContent = "Reaching in…";
+    document.querySelectorAll(".jar-particle").forEach((p) => p.classList.add("dim"));
+
+    const rise = document.createElement("div");
+    rise.className = "jar-rise";
+    document.querySelector(".jar-body").appendChild(rise);
+
     setTimeout(() => {
-      setPulling(false);
-      onPull();
-      setScreen("message");
+      pulling = false;
+      document.getElementById("pull-label").textContent = "Pull a Message";
+      document.querySelectorAll(".jar-particle").forEach((p) => p.classList.remove("dim"));
+      rise.remove();
+      loadMessage(pickRandomMessage());
+      showScreen("message");
     }, 1150);
-  };
+  }
 
-  return (
-    <div className="flex flex-col items-center px-6 pt-6 pb-16 fade-up">
-      <Jar pulling={pulling} />
-      <p
-        className="mt-8 text-center max-w-xs"
-        style={{ fontFamily: FONTS.display, fontStyle: "italic", fontSize: 19, color: C.ink, lineHeight: 1.5 }}
-      >
-        A quiet place to leave a thought, and find one waiting.
-      </p>
-      <p
-        className="mt-2 text-center max-w-xs"
-        style={{ fontFamily: FONTS.body, fontSize: 13, color: C.inkSoft, lineHeight: 1.6 }}
-      >
-        1,204 thoughts are resting in the jar right now.
-      </p>
+  /* ---------------- message screen ---------------- */
+  let currentKarma = 0;
+  let karmaGiven = false;
+  let aiUsed = false;
+  let replyIdCounter = 0;
 
-      <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
-        <PrimaryButton icon={Feather} onClick={() => setScreen("drop")}>
-          Drop a Thought
-        </PrimaryButton>
-        <SecondaryButton icon={Sparkles} onClick={handlePull}>
-          {pulling ? "Reaching in\u2026" : "Pull a Message"}
-        </SecondaryButton>
-      </div>
-    </div>
-  );
-}
+  function loadMessage(msg) {
+    document.getElementById("msg-id").textContent = "MESSAGE NO. " + msg.id;
+    document.getElementById("msg-time").textContent = msg.left;
+    document.getElementById("msg-text").textContent = msg.text;
 
-function ReplyCard({ author, text, karma, ai }) {
-  return (
-    <div
-      className="rounded-2xl p-4 fade-up"
-      style={{ background: C.white, border: `1px solid ${C.paperDeep}` }}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <span
-          className="inline-flex items-center gap-1.5"
-          style={{ fontFamily: FONTS.mono, fontSize: 10, color: ai ? C.amberDeep : C.inkFaint, letterSpacing: "0.04em" }}
-        >
-          {ai && <Sparkles size={11} />}
-          {author}
-        </span>
-        <span className="inline-flex items-center gap-1" style={{ color: C.inkFaint }}>
-          <Heart size={12} strokeWidth={2} />
-          <span style={{ fontFamily: FONTS.mono, fontSize: 10 }}>{karma}</span>
-        </span>
-      </div>
-      <p style={{ fontFamily: FONTS.body, fontSize: 14, color: C.ink, lineHeight: 1.6 }}>{text}</p>
-    </div>
-  );
-}
+    currentKarma = 3 + Math.floor(Math.random() * 30);
+    karmaGiven = false;
+    aiUsed = false;
+    document.getElementById("karma-count").textContent = currentKarma;
+    document.getElementById("karma-btn").classList.remove("filled");
+    document.getElementById("karma-icon").setAttribute("fill", "none");
+    document.getElementById("karma-icon").setAttribute("stroke", "var(--ink)");
+    document.getElementById("ai-btn").removeAttribute("disabled");
+    document.getElementById("ai-btn").style.opacity = 1;
 
-function MessageScreen({ setScreen, message }) {
-  const [karma, setKarma] = useState(() => 3 + Math.floor(Math.random() * 30));
-  const [given, setGiven] = useState(false);
-  const [replies, setReplies] = useState(SEED_REPLIES);
-  const [replying, setReplying] = useState(false);
-  const [replyText, setReplyText] = useState("");
-  const [aiUsed, setAiUsed] = useState(false);
-  const [pulse, setPulse] = useState(false);
+    document.getElementById("reply-box").style.display = "none";
+    document.getElementById("reply-input").value = "";
+    updateReplyCount();
 
-  const giveKarma = () => {
-    if (given) return;
-    setGiven(true);
-    setKarma((k) => k + 1);
-    setPulse(true);
-    setTimeout(() => setPulse(false), 400);
-  };
+    const thread = document.getElementById("thread");
+    thread.innerHTML = "";
+    addReplyCard("a stranger", "Quiet nights are their own kind of arrival. I hope it stays a while.", 4, false);
+  }
 
-  const sendReply = () => {
-    if (!replyText.trim()) return;
-    setReplies((r) => [...r, { id: `u-${Date.now()}`, author: "you", text: replyText.trim(), karma: 0, ai: false }]);
-    setReplyText("");
-    setReplying(false);
-  };
+  function toggleReply() {
+    const box = document.getElementById("reply-box");
+    box.style.display = box.style.display === "none" ? "block" : "none";
+  }
 
-  const askZenAI = () => {
+  function updateReplyCount() {
+    const val = document.getElementById("reply-input").value;
+    document.getElementById("reply-count").textContent = val.length + "/300";
+  }
+
+  function sendReply() {
+    const input = document.getElementById("reply-input");
+    const text = input.value.trim();
+    if (!text) return;
+    addReplyCard("you", text, 0, false);
+    input.value = "";
+    updateReplyCount();
+    document.getElementById("reply-box").style.display = "none";
+  }
+
+  function giveKarma() {
+    if (karmaGiven) return;
+    karmaGiven = true;
+    currentKarma += 1;
+    document.getElementById("karma-count").textContent = currentKarma;
+    document.getElementById("karma-btn").classList.add("filled");
+    const icon = document.getElementById("karma-icon");
+    icon.setAttribute("fill", "var(--white)");
+    icon.setAttribute("stroke", "var(--white)");
+    icon.style.animation = "pulseHeart 0.4s ease";
+    setTimeout(() => { icon.style.animation = "none"; }, 400);
+  }
+
+  function askZenAI() {
     if (aiUsed) return;
-    setAiUsed(true);
+    aiUsed = true;
+    const btn = document.getElementById("ai-btn");
+    btn.setAttribute("disabled", "true");
+    btn.style.opacity = 0.4;
     const line = ZEN_AI_LINES[Math.floor(Math.random() * ZEN_AI_LINES.length)];
-    setReplies((r) => [...r, { id: "ai-1", author: "zen ai", text: line, karma: 0, ai: true }]);
-  };
+    addReplyCard("zen ai", line, 0, true);
+  }
 
-  return (
-    <div className="px-6 pt-6 pb-16 max-w-md mx-auto fade-up">
-      <button
-        onClick={() => setScreen("home")}
-        className="mb-6 inline-flex items-center gap-1.5 focus:outline-none"
-        style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.inkSoft }}
-      >
-        <ArrowLeft size={14} /> back to the jar
-      </button>
+  function addReplyCard(author, text, karma, ai) {
+    const thread = document.getElementById("thread");
+    const card = document.createElement("div");
+    card.className = "reply-card";
+    card.innerHTML =
+      '<div class="reply-card-top">' +
+        '<span class="reply-author' + (ai ? " ai" : "") + '">' + (ai ? sparkleSvg() : "") + author + '</span>' +
+        '<span class="reply-karma">' + heartSvg() + '<span>' + karma + '</span></span>' +
+      '</div>' +
+      '<p class="reply-text"></p>';
+    card.querySelector(".reply-text").textContent = text;
+    thread.appendChild(card);
+  }
 
-      <div
-        className="rounded-3xl p-7 shadow-sm"
-        style={{ background: C.white, border: `1px solid ${C.paperDeep}` }}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.inkFaint, letterSpacing: "0.05em" }}>
-            MESSAGE NO. {message.id}
-          </span>
-          <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.inkFaint }}>{message.left}</span>
-        </div>
-        <p style={{ fontFamily: FONTS.display, fontSize: 21, lineHeight: 1.6, color: C.ink }}>
-          {message.text}
-        </p>
+  function sparkleSvg() {
+    return '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:-1px;"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>';
+  }
+  function heartSvg() {
+    return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+  }
 
-        <div className="mt-6 flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setReplying((v) => !v)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full transition-colors focus:outline-none focus:ring-2"
-            style={{ fontFamily: FONTS.body, fontSize: 13, fontWeight: 600, color: C.ink, background: C.paper, ringColor: C.sage }}
-          >
-            <MessageCircle size={14} color={C.sageLine} /> Reply anonymously
-          </button>
-          <button
-            onClick={giveKarma}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full transition-colors focus:outline-none focus:ring-2"
-            style={{
-              fontFamily: FONTS.body,
-              fontSize: 13,
-              fontWeight: 600,
-              color: given ? C.white : C.ink,
-              background: given ? C.amberDeep : C.paper,
-              ringColor: C.amber,
-            }}
-          >
-            <Heart
-              size={14}
-              strokeWidth={2}
-              fill={given ? C.white : "none"}
-              style={{ animation: pulse ? "pulseHeart 0.4s ease" : "none" }}
-            />
-            {karma}
-          </button>
-          <button
-            onClick={askZenAI}
-            disabled={aiUsed}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full transition-colors focus:outline-none focus:ring-2 disabled:opacity-40"
-            style={{ fontFamily: FONTS.body, fontSize: 13, fontWeight: 600, color: C.ink, background: C.paper, ringColor: C.blue }}
-          >
-            <Sparkles size={14} color={C.amberDeep} /> Ask Zen AI to reply
-          </button>
-        </div>
+  /* ---------------- drop screen ---------------- */
+  function updateDropCount() {
+    const val = document.getElementById("drop-input").value;
+    const counter = document.getElementById("drop-count");
+    counter.textContent = val.length + "/300";
+    counter.classList.toggle("warn", val.length > 280);
+    document.getElementById("release-btn").disabled = val.trim().length === 0;
+  }
 
-        {replying && (
-          <div className="mt-5 fade-up">
-            <textarea
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value.slice(0, 300))}
-              placeholder="offer a few kind words, gently\u2026"
-              rows={3}
-              className="w-full rounded-2xl p-3 resize-none focus:outline-none focus:ring-2"
-              style={{ fontFamily: FONTS.body, fontSize: 14, color: C.ink, background: C.paper, border: `1px solid ${C.paperDeep}`, ringColor: C.sage }}
-            />
-            <div className="mt-2 flex items-center justify-between">
-              <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.inkFaint }}>{replyText.length}/300</span>
-              <PrimaryButton icon={Send} onClick={sendReply}>
-                Send reply
-              </PrimaryButton>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {replies.length > 0 && (
-        <div className="mt-6 space-y-3 pl-4" style={{ borderLeft: `2px solid ${C.paperDeep}` }}>
-          {replies.map((r) => (
-            <ReplyCard key={r.id} {...r} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DropScreen({ setScreen }) {
-  const [text, setText] = useState("");
-  const [released, setReleased] = useState(false);
-
-  const release = () => {
-    if (!text.trim()) return;
-    setReleased(true);
+  function releaseMessage() {
+    const input = document.getElementById("drop-input");
+    if (!input.value.trim()) return;
+    document.getElementById("drop-form").style.display = "none";
+    document.getElementById("drop-confirm").classList.add("active");
     setTimeout(() => {
-      setReleased(false);
-      setText("");
-      setScreen("home");
+      document.getElementById("drop-confirm").classList.remove("active");
+      document.getElementById("drop-form").style.display = "block";
+      input.value = "";
+      updateDropCount();
+      showScreen("home");
     }, 1600);
-  };
+  }
 
-  return (
-    <div className="px-6 pt-6 pb-16 max-w-md mx-auto fade-up">
-      <button
-        onClick={() => setScreen("home")}
-        className="mb-6 inline-flex items-center gap-1.5 focus:outline-none"
-        style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.inkSoft }}
-      >
-        <ArrowLeft size={14} /> back to the jar
-      </button>
-
-      <h1 style={{ fontFamily: FONTS.display, fontStyle: "italic", fontSize: 26, color: C.ink }}>
-        Leave a thought
-      </h1>
-      <p className="mt-2 mb-6" style={{ fontFamily: FONTS.body, fontSize: 13, color: C.inkSoft, lineHeight: 1.6 }}>
-        No name, no history attached. Just the thought itself, released into the jar for someone to find.
-      </p>
-
-      {!released ? (
-        <div
-          className="rounded-3xl p-6 shadow-sm"
-          style={{ background: C.white, border: `1px solid ${C.paperDeep}` }}
-        >
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value.slice(0, 300))}
-            placeholder="what's on your mind, quietly\u2026"
-            rows={6}
-            className="w-full resize-none focus:outline-none"
-            style={{ fontFamily: FONTS.display, fontSize: 17, color: C.ink, lineHeight: 1.6, background: "transparent" }}
-          />
-          <div className="mt-4 flex items-center justify-between">
-            <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: text.length > 280 ? C.amberDeep : C.inkFaint }}>
-              {text.length}/300
-            </span>
-            <PrimaryButton icon={Feather} onClick={release} disabled={!text.trim()}>
-              Release into the Jar
-            </PrimaryButton>
-          </div>
-        </div>
-      ) : (
-        <div
-          className="rounded-3xl p-10 flex flex-col items-center text-center fade-up"
-          style={{ background: C.white, border: `1px solid ${C.paperDeep}` }}
-        >
-          <div
-            className="rounded-full mb-4"
-            style={{ width: 46, height: 30, background: `linear-gradient(180deg, ${C.amber}, ${C.amberDeep})`, animation: "riseOut 1.4s ease-out forwards" }}
-          />
-          <p style={{ fontFamily: FONTS.display, fontStyle: "italic", fontSize: 18, color: C.ink }}>
-            Your thought has joined the jar.
-          </p>
-          <p className="mt-1" style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.inkFaint }}>
-            someone will find it soon
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function ZenJarPrototype() {
-  const [screen, setScreen] = useState("home");
-  const [message, setMessage] = useState(() => pickRandomMessage());
-
-  return (
-    <div
-      className="min-h-screen w-full"
-      style={{
-        background: `radial-gradient(circle at 50% -10%, ${C.blueSoft}55, transparent 55%), radial-gradient(circle at 85% 30%, ${C.sageSoft}55, transparent 50%), ${C.paper}`,
-        fontFamily: FONTS.body,
-      }}
-    >
-      <GlobalStyle />
-      <TopBar />
-      <div key={screen}>
-        {screen === "home" && <HomeScreen setScreen={setScreen} onPull={() => setMessage(pickRandomMessage())} />}
-        {screen === "message" && <MessageScreen setScreen={setScreen} message={message} />}
-        {screen === "drop" && <DropScreen setScreen={setScreen} />}
-      </div>
-    </div>
-  );
-}
+  /* ---------------- init ---------------- */
+  renderJarParticles();
+  loadMessage(pickRandomMessage());
+</script>
+</body>
+</html>
