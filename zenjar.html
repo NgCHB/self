@@ -1,0 +1,608 @@
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import { Heart, Send, ArrowLeft, Sparkles, MessageCircle, Leaf, Feather } from "lucide-react";
+
+const C = {
+  paper: "#F7F4EC",
+  paperDeep: "#EDE7D8",
+  sage: "#A8C0A2",
+  sageSoft: "#DCE7D8",
+  sageLine: "#89A583",
+  blue: "#B7CFDA",
+  blueSoft: "#DEE9EE",
+  sand: "#E7DCC3",
+  ink: "#3E3C35",
+  inkSoft: "#8A867B",
+  inkFaint: "#B4AFA2",
+  amber: "#DDAE72",
+  amberDeep: "#B8874C",
+  white: "#FFFFFF",
+};
+
+const FONTS = {
+  display: '"Fraunces", ui-serif, Georgia, serif',
+  body: '"Karla", ui-sans-serif, system-ui, sans-serif',
+  mono: '"IBM Plex Mono", ui-monospace, monospace',
+};
+
+const OPENERS = [
+  "Some days", "Lately", "Tonight", "This morning", "After a long week",
+  "In the middle of everything", "Quietly", "Somewhere in here",
+  "Without meaning to", "Even now",
+];
+
+const FRAGMENTS = [
+  "I remembered how much a small kindness can carry.",
+  "I let myself rest instead of finishing the list.",
+  "I missed someone I haven't spoken to in years.",
+  "I felt proud of getting through today, nothing more.",
+  "I noticed the light change and it stopped me for a second.",
+  "I forgave myself for something small and it felt enormous.",
+  "I wondered if anyone else feels this unsure sometimes.",
+  "I laughed at something dumb and it fixed my whole mood.",
+  "I wanted to tell a stranger they're doing better than they think.",
+  "I sat with a feeling instead of trying to fix it.",
+  "I realized I've been carrying something I don't need anymore.",
+  "I was kind to myself for once, and it felt unfamiliar.",
+  "I thought about how far I've come without noticing.",
+  "I decided today didn't have to be productive to matter.",
+  "I caught myself smiling at nothing in particular.",
+  "I let a plan fall apart and it was okay.",
+  "I said something honest and nobody flinched.",
+  "I chose rest over guilt, just this once.",
+  "I noticed how quiet my mind gets right before sleep.",
+  "I felt grateful for a person who checked in on me.",
+  "I wrote something down just so it wasn't only in my head.",
+  "I forgave a version of myself from a while back.",
+  "I asked for help and it didn't feel like weakness.",
+  "I watched the rain and didn't think about anything else.",
+  "I was surprised by how okay I felt, all things considered.",
+  "I held a door for someone and it made my whole day better.",
+  "I let go of a grudge I'd been carrying too long.",
+  "I noticed I'm gentler with others than I am with myself.",
+  "I felt the ordinary weight of just being tired.",
+  "I found a little hope in a very small thing.",
+];
+
+const TIME_LABELS = [
+  "just now", "2 minutes ago", "8 minutes ago", "an hour ago", "this morning",
+  "yesterday", "2 days ago", "3 days ago", "last week", "a moment ago",
+];
+
+const MESSAGE_POOL = OPENERS.flatMap((opener, oi) =>
+  FRAGMENTS.map((fragment, fi) => {
+    const n = oi * FRAGMENTS.length + fi;
+    return {
+      id: String(1000 + n),
+      text: `${opener}, ${fragment.charAt(0).toLowerCase()}${fragment.slice(1)}`,
+      left: TIME_LABELS[n % TIME_LABELS.length],
+    };
+  })
+);
+
+function pickRandomMessage() {
+  return MESSAGE_POOL[Math.floor(Math.random() * MESSAGE_POOL.length)];
+}
+
+const SEED_REPLIES = [
+  { id: "r1", author: "a stranger", text: "Quiet nights are their own kind of arrival. I hope it stays a while.", karma: 4, ai: false },
+];
+
+const ZEN_AI_LINES = [
+  "That kind of quiet is worth noticing, not rushing past. Thank you for sharing it here.",
+  "Enough is a good place to rest tonight. Wishing you a gentle morning after this one.",
+  "It sounds like you gave yourself some room to breathe. That matters more than it seems.",
+];
+
+function useParticles(count, seed = 1) {
+  return useMemo(() => {
+    let s = seed;
+    const rand = () => {
+      s = (s * 9301 + 49297) % 233280;
+      return s / 233280;
+    };
+    return Array.from({ length: count }).map((_, i) => ({
+      id: i,
+      left: 14 + rand() * 72,
+      top: 18 + rand() * 68,
+      size: 16 + rand() * 14,
+      rot: -18 + rand() * 36,
+      dur: 5 + rand() * 4,
+      delay: rand() * 4,
+      tone: i % 3 === 0 ? C.blueSoft : i % 3 === 1 ? C.sageSoft : C.white,
+    }));
+  }, [count, seed]);
+}
+
+function GlobalStyle() {
+  return (
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+      @keyframes bob {
+        0%, 100% { transform: translateY(0) rotate(var(--rot)); }
+        50% { transform: translateY(-10px) rotate(var(--rot)); }
+      }
+      @keyframes drift {
+        0% { transform: translate(0,0); }
+        33% { transform: translate(6px,-4px); }
+        66% { transform: translate(-4px,3px); }
+        100% { transform: translate(0,0); }
+      }
+      @keyframes riseOut {
+        0% { transform: translateY(0) scale(1); opacity: 1; }
+        60% { transform: translateY(-90px) scale(1.08); opacity: 1; }
+        100% { transform: translateY(-140px) scale(0.9); opacity: 0; }
+      }
+      @keyframes pulseHeart {
+        0% { transform: scale(1); }
+        40% { transform: scale(1.35); }
+        100% { transform: scale(1); }
+      }
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes glow {
+        0%, 100% { opacity: 0.55; }
+        50% { opacity: 0.85; }
+      }
+      .fade-up { animation: fadeUp 0.5s ease both; }
+      .zj-particle { animation: bob 6s ease-in-out infinite; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .zj-particle, .fade-up, [style*="animation"] { animation: none !important; }
+      }
+    `}</style>
+  );
+}
+
+function Wordmark({ size = 18 }) {
+  return (
+    <div className="flex items-center gap-2 select-none">
+      <Leaf size={size} strokeWidth={1.5} color={C.sageLine} />
+      <span
+        style={{ fontFamily: FONTS.display, fontStyle: "italic", fontWeight: 500, color: C.ink, fontSize: size + 2 }}
+      >
+        zen jar
+      </span>
+    </div>
+  );
+}
+
+function TopBar() {
+  return (
+    <div className="w-full flex items-center justify-center px-6 sm:px-10 pt-8 pb-2">
+      <Wordmark />
+    </div>
+  );
+}
+
+function Jar({ pulling }) {
+  const particles = useParticles(9, 4);
+  return (
+    <div className="relative mx-auto" style={{ width: 232, height: 268 }}>
+      {/* ambient glow */}
+      <div
+        className="absolute rounded-full blur-3xl"
+        style={{
+          width: 260,
+          height: 260,
+          left: -14,
+          top: 30,
+          background: `radial-gradient(circle, ${C.amber}55, transparent 70%)`,
+          animation: "glow 4.5s ease-in-out infinite",
+        }}
+      />
+      {/* lid */}
+      <div
+        className="absolute left-1/2 rounded-full shadow-sm"
+        style={{
+          top: 0,
+          width: 92,
+          height: 20,
+          transform: "translateX(-50%)",
+          background: `linear-gradient(180deg, ${C.sand}, ${C.amberDeep})`,
+          border: `1px solid ${C.amberDeep}`,
+        }}
+      />
+      {/* neck */}
+      <div
+        className="absolute left-1/2"
+        style={{
+          top: 15,
+          width: 76,
+          height: 26,
+          transform: "translateX(-50%)",
+          background: `linear-gradient(180deg, ${C.blueSoft}cc, ${C.white}66)`,
+          borderLeft: `1px solid ${C.white}`,
+          borderRight: `1px solid ${C.white}`,
+          borderTop: `1px solid ${C.white}`,
+        }}
+      />
+      {/* body */}
+      <div
+        className="absolute left-1/2 rounded-3xl overflow-hidden shadow-xl"
+        style={{
+          top: 36,
+          width: 224,
+          height: 228,
+          transform: "translateX(-50%)",
+          background: `linear-gradient(155deg, ${C.white}b3 0%, ${C.blueSoft}99 45%, ${C.sageSoft}99 100%)`,
+          border: `1px solid ${C.white}`,
+          backdropFilter: "blur(2px)",
+        }}
+      >
+        {/* glass highlight */}
+        <div
+          className="absolute rounded-full blur-2xl"
+          style={{ width: 70, height: 180, left: 22, top: 10, background: `${C.white}80` }}
+        />
+        {/* floating messages */}
+        {particles.map((p) => (
+          <div
+            key={p.id}
+            className="zj-particle absolute rounded-md shadow-sm"
+            style={{
+              left: `${p.left}%`,
+              top: `${p.top}%`,
+              width: p.size,
+              height: p.size * 0.7,
+              background: p.tone,
+              border: `1px solid ${C.white}`,
+              "--rot": `${p.rot}deg`,
+              transform: `rotate(${p.rot}deg)`,
+              animationDuration: `${p.dur}s`,
+              animationDelay: `${p.delay}s`,
+              opacity: pulling ? 0.25 : 0.9,
+              transition: "opacity 0.6s ease",
+            }}
+          />
+        ))}
+        {/* rising particle when pulling */}
+        {pulling && (
+          <div
+            className="absolute rounded-md shadow-md"
+            style={{
+              left: "44%",
+              bottom: 20,
+              width: 26,
+              height: 18,
+              background: C.white,
+              border: `1px solid ${C.amberDeep}`,
+              animation: "riseOut 1.1s ease-out forwards",
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PrimaryButton({ children, onClick, icon: Icon, disabled }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="inline-flex items-center gap-2 px-6 py-3 rounded-full transition-transform duration-300 focus:outline-none focus:ring-2 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
+      style={{
+        fontFamily: FONTS.body,
+        fontWeight: 600,
+        fontSize: 14,
+        color: C.white,
+        background: `linear-gradient(180deg, ${C.amber}, ${C.amberDeep})`,
+        boxShadow: "0 8px 20px -8px rgba(184,135,76,0.55)",
+        ringColor: C.amber,
+      }}
+    >
+      {Icon && <Icon size={16} strokeWidth={2} />}
+      {children}
+    </button>
+  );
+}
+
+function SecondaryButton({ children, onClick, icon: Icon }) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-2 px-6 py-3 rounded-full transition-transform duration-300 focus:outline-none focus:ring-2 active:scale-[0.97]"
+      style={{
+        fontFamily: FONTS.body,
+        fontWeight: 600,
+        fontSize: 14,
+        color: C.ink,
+        background: C.white,
+        border: `1px solid ${C.paperDeep}`,
+        ringColor: C.sage,
+      }}
+    >
+      {Icon && <Icon size={16} strokeWidth={2} color={C.sageLine} />}
+      {children}
+    </button>
+  );
+}
+
+function HomeScreen({ setScreen, onPull }) {
+  const [pulling, setPulling] = useState(false);
+
+  const handlePull = () => {
+    if (pulling) return;
+    setPulling(true);
+    setTimeout(() => {
+      setPulling(false);
+      onPull();
+      setScreen("message");
+    }, 1150);
+  };
+
+  return (
+    <div className="flex flex-col items-center px-6 pt-6 pb-16 fade-up">
+      <Jar pulling={pulling} />
+      <p
+        className="mt-8 text-center max-w-xs"
+        style={{ fontFamily: FONTS.display, fontStyle: "italic", fontSize: 19, color: C.ink, lineHeight: 1.5 }}
+      >
+        A quiet place to leave a thought, and find one waiting.
+      </p>
+      <p
+        className="mt-2 text-center max-w-xs"
+        style={{ fontFamily: FONTS.body, fontSize: 13, color: C.inkSoft, lineHeight: 1.6 }}
+      >
+        1,204 thoughts are resting in the jar right now.
+      </p>
+
+      <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
+        <PrimaryButton icon={Feather} onClick={() => setScreen("drop")}>
+          Drop a Thought
+        </PrimaryButton>
+        <SecondaryButton icon={Sparkles} onClick={handlePull}>
+          {pulling ? "Reaching in\u2026" : "Pull a Message"}
+        </SecondaryButton>
+      </div>
+    </div>
+  );
+}
+
+function ReplyCard({ author, text, karma, ai }) {
+  return (
+    <div
+      className="rounded-2xl p-4 fade-up"
+      style={{ background: C.white, border: `1px solid ${C.paperDeep}` }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span
+          className="inline-flex items-center gap-1.5"
+          style={{ fontFamily: FONTS.mono, fontSize: 10, color: ai ? C.amberDeep : C.inkFaint, letterSpacing: "0.04em" }}
+        >
+          {ai && <Sparkles size={11} />}
+          {author}
+        </span>
+        <span className="inline-flex items-center gap-1" style={{ color: C.inkFaint }}>
+          <Heart size={12} strokeWidth={2} />
+          <span style={{ fontFamily: FONTS.mono, fontSize: 10 }}>{karma}</span>
+        </span>
+      </div>
+      <p style={{ fontFamily: FONTS.body, fontSize: 14, color: C.ink, lineHeight: 1.6 }}>{text}</p>
+    </div>
+  );
+}
+
+function MessageScreen({ setScreen, message }) {
+  const [karma, setKarma] = useState(() => 3 + Math.floor(Math.random() * 30));
+  const [given, setGiven] = useState(false);
+  const [replies, setReplies] = useState(SEED_REPLIES);
+  const [replying, setReplying] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [aiUsed, setAiUsed] = useState(false);
+  const [pulse, setPulse] = useState(false);
+
+  const giveKarma = () => {
+    if (given) return;
+    setGiven(true);
+    setKarma((k) => k + 1);
+    setPulse(true);
+    setTimeout(() => setPulse(false), 400);
+  };
+
+  const sendReply = () => {
+    if (!replyText.trim()) return;
+    setReplies((r) => [...r, { id: `u-${Date.now()}`, author: "you", text: replyText.trim(), karma: 0, ai: false }]);
+    setReplyText("");
+    setReplying(false);
+  };
+
+  const askZenAI = () => {
+    if (aiUsed) return;
+    setAiUsed(true);
+    const line = ZEN_AI_LINES[Math.floor(Math.random() * ZEN_AI_LINES.length)];
+    setReplies((r) => [...r, { id: "ai-1", author: "zen ai", text: line, karma: 0, ai: true }]);
+  };
+
+  return (
+    <div className="px-6 pt-6 pb-16 max-w-md mx-auto fade-up">
+      <button
+        onClick={() => setScreen("home")}
+        className="mb-6 inline-flex items-center gap-1.5 focus:outline-none"
+        style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.inkSoft }}
+      >
+        <ArrowLeft size={14} /> back to the jar
+      </button>
+
+      <div
+        className="rounded-3xl p-7 shadow-sm"
+        style={{ background: C.white, border: `1px solid ${C.paperDeep}` }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.inkFaint, letterSpacing: "0.05em" }}>
+            MESSAGE NO. {message.id}
+          </span>
+          <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.inkFaint }}>{message.left}</span>
+        </div>
+        <p style={{ fontFamily: FONTS.display, fontSize: 21, lineHeight: 1.6, color: C.ink }}>
+          {message.text}
+        </p>
+
+        <div className="mt-6 flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setReplying((v) => !v)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full transition-colors focus:outline-none focus:ring-2"
+            style={{ fontFamily: FONTS.body, fontSize: 13, fontWeight: 600, color: C.ink, background: C.paper, ringColor: C.sage }}
+          >
+            <MessageCircle size={14} color={C.sageLine} /> Reply anonymously
+          </button>
+          <button
+            onClick={giveKarma}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full transition-colors focus:outline-none focus:ring-2"
+            style={{
+              fontFamily: FONTS.body,
+              fontSize: 13,
+              fontWeight: 600,
+              color: given ? C.white : C.ink,
+              background: given ? C.amberDeep : C.paper,
+              ringColor: C.amber,
+            }}
+          >
+            <Heart
+              size={14}
+              strokeWidth={2}
+              fill={given ? C.white : "none"}
+              style={{ animation: pulse ? "pulseHeart 0.4s ease" : "none" }}
+            />
+            {karma}
+          </button>
+          <button
+            onClick={askZenAI}
+            disabled={aiUsed}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full transition-colors focus:outline-none focus:ring-2 disabled:opacity-40"
+            style={{ fontFamily: FONTS.body, fontSize: 13, fontWeight: 600, color: C.ink, background: C.paper, ringColor: C.blue }}
+          >
+            <Sparkles size={14} color={C.amberDeep} /> Ask Zen AI to reply
+          </button>
+        </div>
+
+        {replying && (
+          <div className="mt-5 fade-up">
+            <textarea
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value.slice(0, 300))}
+              placeholder="offer a few kind words, gently\u2026"
+              rows={3}
+              className="w-full rounded-2xl p-3 resize-none focus:outline-none focus:ring-2"
+              style={{ fontFamily: FONTS.body, fontSize: 14, color: C.ink, background: C.paper, border: `1px solid ${C.paperDeep}`, ringColor: C.sage }}
+            />
+            <div className="mt-2 flex items-center justify-between">
+              <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.inkFaint }}>{replyText.length}/300</span>
+              <PrimaryButton icon={Send} onClick={sendReply}>
+                Send reply
+              </PrimaryButton>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {replies.length > 0 && (
+        <div className="mt-6 space-y-3 pl-4" style={{ borderLeft: `2px solid ${C.paperDeep}` }}>
+          {replies.map((r) => (
+            <ReplyCard key={r.id} {...r} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DropScreen({ setScreen }) {
+  const [text, setText] = useState("");
+  const [released, setReleased] = useState(false);
+
+  const release = () => {
+    if (!text.trim()) return;
+    setReleased(true);
+    setTimeout(() => {
+      setReleased(false);
+      setText("");
+      setScreen("home");
+    }, 1600);
+  };
+
+  return (
+    <div className="px-6 pt-6 pb-16 max-w-md mx-auto fade-up">
+      <button
+        onClick={() => setScreen("home")}
+        className="mb-6 inline-flex items-center gap-1.5 focus:outline-none"
+        style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.inkSoft }}
+      >
+        <ArrowLeft size={14} /> back to the jar
+      </button>
+
+      <h1 style={{ fontFamily: FONTS.display, fontStyle: "italic", fontSize: 26, color: C.ink }}>
+        Leave a thought
+      </h1>
+      <p className="mt-2 mb-6" style={{ fontFamily: FONTS.body, fontSize: 13, color: C.inkSoft, lineHeight: 1.6 }}>
+        No name, no history attached. Just the thought itself, released into the jar for someone to find.
+      </p>
+
+      {!released ? (
+        <div
+          className="rounded-3xl p-6 shadow-sm"
+          style={{ background: C.white, border: `1px solid ${C.paperDeep}` }}
+        >
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value.slice(0, 300))}
+            placeholder="what's on your mind, quietly\u2026"
+            rows={6}
+            className="w-full resize-none focus:outline-none"
+            style={{ fontFamily: FONTS.display, fontSize: 17, color: C.ink, lineHeight: 1.6, background: "transparent" }}
+          />
+          <div className="mt-4 flex items-center justify-between">
+            <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: text.length > 280 ? C.amberDeep : C.inkFaint }}>
+              {text.length}/300
+            </span>
+            <PrimaryButton icon={Feather} onClick={release} disabled={!text.trim()}>
+              Release into the Jar
+            </PrimaryButton>
+          </div>
+        </div>
+      ) : (
+        <div
+          className="rounded-3xl p-10 flex flex-col items-center text-center fade-up"
+          style={{ background: C.white, border: `1px solid ${C.paperDeep}` }}
+        >
+          <div
+            className="rounded-full mb-4"
+            style={{ width: 46, height: 30, background: `linear-gradient(180deg, ${C.amber}, ${C.amberDeep})`, animation: "riseOut 1.4s ease-out forwards" }}
+          />
+          <p style={{ fontFamily: FONTS.display, fontStyle: "italic", fontSize: 18, color: C.ink }}>
+            Your thought has joined the jar.
+          </p>
+          <p className="mt-1" style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.inkFaint }}>
+            someone will find it soon
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ZenJarPrototype() {
+  const [screen, setScreen] = useState("home");
+  const [message, setMessage] = useState(() => pickRandomMessage());
+
+  return (
+    <div
+      className="min-h-screen w-full"
+      style={{
+        background: `radial-gradient(circle at 50% -10%, ${C.blueSoft}55, transparent 55%), radial-gradient(circle at 85% 30%, ${C.sageSoft}55, transparent 50%), ${C.paper}`,
+        fontFamily: FONTS.body,
+      }}
+    >
+      <GlobalStyle />
+      <TopBar />
+      <div key={screen}>
+        {screen === "home" && <HomeScreen setScreen={setScreen} onPull={() => setMessage(pickRandomMessage())} />}
+        {screen === "message" && <MessageScreen setScreen={setScreen} message={message} />}
+        {screen === "drop" && <DropScreen setScreen={setScreen} />}
+      </div>
+    </div>
+  );
+}
