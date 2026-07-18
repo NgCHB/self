@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Reference</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%232E351F'/%3E%3Ccircle cx='32' cy='32' r='29' fill='none' stroke='%23C39B4A' stroke-width='1.5'/%3E%3Ctext x='32' y='45' font-size='34' text-anchor='middle' font-family='Georgia, serif' fill='%23C39B4A'%3E%E7%81%AB%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#242A1C;
+    --panel:#2E351F;
+    --panel-2:#363E24;
+    --parchment:#EDE3CB;
+    --parchment-dim:#AEB08E;
+    --cinnabar:#B23A2E;
+    --gold:#C39B4A;
+    --jade:#4F7A64;
+    --rust:#8C4A2F;
+    --hair:#454C2F;
+    --wood:#7FA65C;
+    --fire:#C1543E;
+    --earth:#C39B4A;
+    --metal:#A8AD97;
+    --water:#5C8C9E;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(178,58,46,0.10), transparent 45%),
+      radial-gradient(ellipse at 90% 10%, rgba(180,137,63,0.08), transparent 40%),
+      var(--ink);
+    color:var(--parchment);
+    font-family:"Noto Serif SC", serif;
+    line-height:1.7;
+    padding-bottom:80px;
+  }
+  .eyebrow{
+    font-family:"Cormorant Garamond", serif;
+    font-style:italic;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    font-size:14px;
+    color:var(--gold);
+    margin-bottom:10px;
+  }
+  header.hero{
+    max-width:760px;
+    margin:0 auto;
+    padding:56px 24px 32px;
+    text-align:center;
+    border-bottom:1px solid var(--hair);
+  }
+  h1.date-heading{
+    font-size:clamp(28px,5vw,44px);
+    font-weight:900;
+    margin:0 0 4px;
+    color:var(--parchment);
+  }
+  .subtitle{
+    color:var(--parchment);
+    font-size:15px;
+    margin-bottom:28px;
+  }
+
+  .char-木{ color:var(--wood); }
+  .char-火{ color:var(--fire); }
+  .char-土{ color:var(--earth); }
+  .char-金{ color:var(--metal); }
+  .char-水{ color:var(--water); }
+
+  .legend{
+    display:flex; gap:16px; justify-content:center; flex-wrap:wrap;
+    font-size:12px; margin-top:14px; color:var(--parchment-dim);
+  }
+  .legend span{ display:inline-flex; align-items:center; gap:5px; }
+  .legend .dot{ width:8px; height:8px; border-radius:50%; display:inline-block; }
+
+  .datebar{
+    display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center;
+    margin-top:6px;
+  }
+  .datebar input[type=date]{
+    background:var(--panel); color:var(--parchment); border:1px solid var(--hair);
+    border-radius:6px; padding:8px 12px; font-family:"JetBrains Mono",monospace; font-size:13px;
+  }
+  .datebar button{
+    background:var(--cinnabar); color:var(--parchment); border:none; border-radius:6px;
+    padding:8px 16px; font-family:"Noto Serif SC",serif; font-size:13px; cursor:pointer;
+  }
+  .datebar button.ghost{ background:transparent; border:1px solid var(--gold); color:var(--gold); }
+
+  main{max-width:760px; margin:0 auto; padding:0 24px;}
+  section{padding:36px 0; border-bottom:1px solid var(--hair);}
+  section:last-of-type{border-bottom:none;}
+  h2.section-title{
+    font-size:13px; letter-spacing:0.2em; text-transform:uppercase;
+    color:var(--gold); font-family:"Cormorant Garamond",serif; font-style:italic;
+    margin:0 0 18px;
+  }
+
+  .pillars{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+    font-family:"JetBrains Mono",monospace;
+  }
+  .pillars .cell{
+    background:var(--panel); border:1px solid var(--hair); border-radius:6px;
+    text-align:center; padding:10px 4px;
+  }
+  .pillars .cell.today{ border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset;}
+  .pillars .cell .stem{ font-size:22px; font-weight:700; }
+  .pillars .cell .branch{ font-size:22px; font-weight:700; }
+  .pillars .head{ font-size:11px; color:var(--parchment-dim); text-align:center; letter-spacing:0.1em;}
+
+  .lunar-line{ margin-top:16px; font-size:15px; color:var(--parchment-dim); }
+  .lunar-line b{ color:var(--parchment); font-weight:600; }
+
+  .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; }
+  .stat{ background:var(--panel); border:1px solid var(--hair); border-radius:8px; padding:14px 16px; }
+  .stat .k{ font-size:11px; color:var(--parchment-dim); letter-spacing:0.1em; }
+  .stat .v{ font-size:20px; font-weight:700; margin-top:4px; font-family:"JetBrains Mono",monospace; }
+
+  .verdict{
+    background:var(--panel-2); border-left:3px solid var(--gold);
+    padding:18px 20px; border-radius:0 8px 8px 0; margin-bottom:18px;
+  }
+  .verdict .verdict-tag{
+    font-size:11px; letter-spacing:0.15em; text-transform:uppercase; color:var(--gold); margin-bottom:6px;
+  }
+
+  ul.advice{ list-style:none; padding:0; margin:0; display:grid; gap:10px; }
+  ul.advice li{
+    background:var(--panel); border:1px solid var(--hair); border-radius:8px;
+    padding:12px 14px; font-size:14.5px; display:flex; gap:10px; align-items:flex-start;
+  }
+  ul.advice li .mark{ color:var(--gold); font-family:"JetBrains Mono",monospace; flex-shrink:0;}
+
+  ol.power-moves{ list-style:none; counter-reset:move; padding:0; margin:0; display:grid; gap:12px; }
+  ol.power-moves li{
+    counter-increment:move;
+    background:var(--panel); border:1px solid var(--hair); border-radius:8px;
+    padding:14px 16px 14px 46px; font-size:14.5px; position:relative;
+  }
+  ol.power-moves li::before{
+    content:counter(move);
+    position:absolute; left:14px; top:14px;
+    width:22px; height:22px; border-radius:50%;
+    background:var(--cinnabar); color:var(--parchment);
+    display:flex; align-items:center; justify-content:center;
+    font-family:"JetBrains Mono",monospace; font-size:12px; font-weight:700;
+  }
+
+  blockquote.mantra{
+    margin:0; padding:16px 20px; border-left:3px solid var(--cinnabar);
+    background:var(--panel-2); border-radius:0 8px 8px 0;
+    font-style:italic; font-size:16px; color:var(--parchment);
+    font-family:"Cormorant Garamond", serif;
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1 class="date-heading" id="gregLine">—</h1>
+  <div class="subtitle" id="lunarLine">—</div>
+
+  <div class="datebar">
+    <input type="date" id="datePicker">
+    <button id="goBtn">View this day</button>
+    <button class="ghost" id="todayBtn">Back to today</button>
+  </div>
+</header>
+
+<main>
+
+  <section id="pillarsSection">
+    <div class="pillars" id="pillarsGrid"></div>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--wood)"></span>Wood 木</span>
+      <span><span class="dot" style="background:var(--fire)"></span>Fire 火</span>
+      <span><span class="dot" style="background:var(--earth)"></span>Earth 土</span>
+      <span><span class="dot" style="background:var(--metal)"></span>Metal 金</span>
+      <span><span class="dot" style="background:var(--water)"></span>Water 水</span>
+    </div>
+  </section>
+
+  <section id="analysisSection">
+    <div class="verdict">
+      <div class="verdict-tag" id="verdictTag">Reading</div>
+      <div id="verdictText">—</div>
+    </div>
+    <div id="interactionText" style="font-size:14.5px;color:var(--parchment-dim);"></div>
+  </section>
+
+  <section id="adviceSection">
+    <h2 class="section-title">Recommendations</h2>
+    <ul class="advice" id="adviceList"></ul>
+  </section>
+
+  <section id="powerMovesSection">
+    <h2 class="section-title">Your 3 Power Moves Today</h2>
+    <ol class="power-moves" id="powerMoves"></ol>
+  </section>
+
+  <section id="mantraSection">
+    <h2 class="section-title">One-Line Mantra</h2>
+    <blockquote class="mantra" id="mantraText">—</blockquote>
+  </section>
+
+</main>
+
+<script>
+/* ---------- basic helpers ---------- */
+function mod(n,m){ return ((n%m)+m)%m; }
+function deg2rad(d){ return d*Math.PI/180; }
+
+const STEMS=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+const STEM_EL=['木','木','火','火','土','土','金','金','水','水'];
+const BRANCHES=['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+const BRANCH_EL=['水','土','木','木','土','火','火','土','金','金','土','水'];
+
+/* ---------- Julian Day Number (civil calendar, Fliegel & Van Flandern) ---------- */
+function gregorianToJDN(y,m,d){
+  const a=Math.floor((14-m)/12);
+  const y2=y+4800-a;
+  const m2=m+12*a-3;
+  return d+Math.floor((153*m2+2)/5)+365*y2+Math.floor(y2/4)-Math.floor(y2/100)+Math.floor(y2/400)-32045;
+}
+
+/* ---------- solar longitude (mean sun + equation of center, degrees) ---------- */
+function solarLongitude(jd){
+  const T=(jd-2451545.0)/36525;
+  const L0=280.46646+36000.76983*T+0.0003032*T*T;
+  const M=357.52911+35999.05029*T-0.0001537*T*T;
+  const Mr=deg2rad(M);
+  const C=(1.914602-0.004817*T-0.000014*T*T)*Math.sin(Mr)
+         +(0.019993-0.000101*T)*Math.sin(2*Mr)
+         +0.000289*Math.sin(3*Mr);
+  return mod(L0+C,360);
+}
+
+/* find JD (approx UT) at which solar longitude == target for term index n (0..23, n=0 -> 285°=小寒) */
+function findSolarTermJD(year,n){
+  const targetLon=mod(285+n*15,360);
+  let jd=gregorianToJDN(year,1,1)-0.5+ n*15.2184 + 5;
+  for(let i=0;i<12;i++){
+    const lon=solarLongitude(jd);
+    let diff=mod(targetLon-lon+180,360)-180;
+    jd+=diff/0.9856;
+  }
+  return jd;
+}
+
+/* ---------- new moon (Meeus low-precision truncated series) ---------- */
+function newMoonJDE(k){
+  const T=k/1236.85, T2=T*T, T3=T2*T, T4=T3*T;
+  let jde=2451550.09766+29.530588861*k+0.00015437*T2-0.000000150*T3+0.00000000073*T4;
+  const E=1-0.002516*T-0.0000074*T2;
+  const M =mod(2.5534+29.10535670*k-0.0000014*T2-0.00000011*T3,360);
+  const Mp=mod(201.5643+385.81693528*k+0.0107582*T2+0.00001238*T3-0.000000058*T4,360);
+  const F =mod(160.7108+390.67050284*k-0.0016118*T2-0.00000227*T3+0.000000011*T4,360);
+  const Om=mod(124.7746-1.56375588*k+0.0020672*T2+0.00000215*T3,360);
+  const r=deg2rad;
+  jde += -0.40720*Math.sin(r(Mp))
+        + 0.17241*E*Math.sin(r(M))
+        + 0.01608*Math.sin(r(2*Mp))
+        + 0.01039*Math.sin(r(2*F))
+        + 0.00739*E*Math.sin(r(Mp-M))
+        - 0.00514*E*Math.sin(r(Mp+M))
+        + 0.00208*E*E*Math.sin(r(2*M))
+        - 0.00111*Math.sin(r(Mp-2*F))
+        - 0.00057*Math.sin(r(Mp+2*F))
+        + 0.00056*E*Math.sin(r(2*Mp+M))
+        - 0.00042*Math.sin(r(3*Mp))
+        + 0.00042*E*Math.sin(r(M+2*F))
+        + 0.00038*E*Math.sin(r(M-2*F))
+        - 0.00024*E*Math.sin(r(2*Mp-M))
+        - 0.00017*Math.sin(r(Om));
+  return jde;
+}
+
+/* convert a UT-ish JD to a Beijing-local integer day number (comparable to civil JDN) */
+function dayNumFromJD(jd){ return Math.floor(jd+0.5+8/24); }
+
+function findNewMoonOnOrBefore(dayNum){
+  const approxJD = dayNum - 0.5 - 8/24;
+  let k=Math.floor((approxJD-2451550.09766)/29.530588861);
+  function dn(kk){ return dayNumFromJD(newMoonJDE(kk)); }
+  let d=dn(k);
+  let guard=0;
+  while(d>dayNum && guard<6){ k--; d=dn(k); guard++; }
+  guard=0;
+  while(dn(k+1)<=dayNum && guard<6){ k++; d=dn(k); guard++; }
+  return {k, day:d};
+}
+
+function findWinterSolsticeDayNum(year){ return dayNumFromJD(findSolarTermJD(year,23)); }
+
+function hasZhongqiInRange(s,e,yearHint){
+  for(let yy=yearHint-1; yy<=yearHint+1; yy++){
+    for(let n=1;n<=23;n+=2){
+      const d=dayNumFromJD(findSolarTermJD(yy,n));
+      if(d>=s && d<e) return true;
+    }
+  }
+  return false;
+}
+
+/* ---------- lunar month/day ---------- */
+const LUNAR_DAY_NAMES=['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十',
+'十一','十二','十三','十四','十五','十六','十七','十八','十九','二十',
+'廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
+const LUNAR_MONTH_NAMES=['正月','二月','三月','四月','五月','六月','七月','八月','九月','十月','冬月','腊月'];
+
+function computeLunarDate(y, queryJDN){
+  let dz1=findWinterSolsticeDayNum(y);
+  let dz0;
+  if(queryJDN<dz1){ dz0=findWinterSolsticeDayNum(y-1); }
+  else { dz0=dz1; dz1=findWinterSolsticeDayNum(y+1); }
+
+  const nm0=findNewMoonOnOrBefore(dz0);
+  const nm1=findNewMoonOnOrBefore(dz1);
+
+  const monthStarts=[];
+  for(let k=nm0.k;k<=nm1.k;k++){ monthStarts.push({k, day: dayNumFromJD(newMoonJDE(k))}); }
+  const totalMonths=monthStarts.length-1;
+  const isLeapYear = totalMonths===13;
+
+  let leapIndex=-1;
+  if(isLeapYear){
+    for(let i=1;i<totalMonths;i++){
+      const s=monthStarts[i].day, e=monthStarts[i+1].day;
+      if(!hasZhongqiInRange(s,e,y)){ leapIndex=i; break; }
+    }
+  }
+
+  let idx=0;
+  for(let i=0;i<totalMonths;i++){
+    if(queryJDN>=monthStarts[i].day && queryJDN<monthStarts[i+1].day){ idx=i; break; }
+  }
+  const lunarDay=queryJDN-monthStarts[idx].day+1;
+
+  let monthNumber, isLeap=false;
+  if(idx===0){ monthNumber=11; }
+  else if(!isLeapYear || idx<leapIndex){
+    monthNumber = 11+idx>12 ? 11+idx-12 : 11+idx;
+  } else if(idx===leapIndex){
+    monthNumber = 11+(idx-1)>12 ? 11+idx-1-12 : 11+(idx-1);
+    isLeap=true;
+  } else {
+    monthNumber = 11+(idx-1)>12 ? 11+idx-1-12 : 11+(idx-1);
+  }
+  return {monthNumber, isLeap, lunarDay};
+}
+
+/* ---------- Qimen Ju table (index 0..23: 小寒..冬至) [上元,中元,下元] ---------- */
+const TERM_NAMES=['小寒','大寒','立春','雨水','惊蛰','春分','清明','谷雨','立夏','小满','芒种','夏至',
+'小暑','大暑','立秋','处暑','白露','秋分','寒露','霜降','立冬','小雪','大雪','冬至'];
+const JU_TABLE=[
+ [2,8,5],[3,9,6],[8,5,2],[9,6,3],[1,7,4],[3,9,6],[4,1,7],[5,2,8],
+ [4,1,7],[5,2,8],[6,3,9],[9,3,6],[8,2,5],[7,1,4],[2,5,8],[1,4,7],
+ [9,3,6],[7,1,4],[6,9,3],[5,8,2],[6,9,3],[5,8,2],[4,7,1],[1,7,4]
+];
+const JU_ELEMENT={1:'水',2:'土',3:'木',4:'木',5:'土',6:'金',7:'金',8:'土',9:'火'};
+const MONTH_BRANCH_BY_SEGMENT=[1,2,3,4,5,6,7,8,9,10,11,0]; // segment 0..11 -> branch index
+
+function getQimenInfo(jdNow, year){
+  const lon=solarLongitude(jdNow);
+  const nFull=Math.floor(mod(lon-285,360)/15);
+  const termName=TERM_NAMES[nFull];
+
+  let bestJD=-Infinity;
+  [year-1,year,year+1].forEach(yy=>{
+    const cand=findSolarTermJD(yy,nFull);
+    if(cand<=jdNow && cand>bestJD) bestJD=cand;
+  });
+  const daysSince=jdNow-bestJD;
+  const yuanIdx=Math.min(2,Math.max(0,Math.floor(daysSince/5)));
+  const juNum=JU_TABLE[nFull][yuanIdx];
+  const isYang=(nFull===23)||(nFull<=10);
+  return {
+    termName, juNum, isYang,
+    element: JU_ELEMENT[juNum],
+    yuanLabel: ['上元','中元','下元'][yuanIdx]
+  };
+}
+
+/* ---------- BaZi for a given Gregorian date (returns year/month/day pillars) ---------- */
+function getBaziForDate(y,m,d){
+  const jdn = gregorianToJDN(y,m,d);
+  const jdNoon = jdn - 0.5; // approx UT jd for that date around midday, fine for longitude precision
+  const lichun = findSolarTermJD(y,2);
+  const baziYear = jdNoon < lichun ? y-1 : y;
+
+  const yearStemIdx = mod(baziYear-4,10);
+  const yearBranchIdx = mod(baziYear-4,12);
+
+  const lon = solarLongitude(jdNoon);
+  const seg = Math.floor(mod(lon-285,360)/30);
+  const monthBranchIdx = MONTH_BRANCH_BY_SEGMENT[seg];
+  const firstMonthStem = mod(2*mod(yearStemIdx,5)+2,10);
+  const monthsFromYin = mod(monthBranchIdx-2,12);
+  const monthStemIdx = mod(firstMonthStem+monthsFromYin,10);
+
+  const dayGanIdx = mod(jdn+9,10);
+  const dayZhiIdx = mod(jdn+1,12);
+
+  const qimen = getQimenInfo(jdNoon, y);
+
+  return {
+    jdn,
+    year:{stem:STEMS[yearStemIdx], branch:BRANCHES[yearBranchIdx]},
+    month:{stem:STEMS[monthStemIdx], branch:BRANCHES[monthBranchIdx]},
+    day:{stem:STEMS[dayGanIdx], branch:BRANCHES[dayZhiIdx]},
+    lunar: computeLunarDate(y, jdn),
+    qimen
+  };
+}
+
+/* ---------- fixed natal chart (from the uploaded pai pan) ---------- */
+const NATAL = {
+  year:{stem:'壬',branch:'戌'},
+  month:{stem:'辛',branch:'亥'},
+  day:{stem:'丙',branch:'申'},
+  hour:{stem:'癸',branch:'巳'},
+  dayMaster:'丙',
+  favorable:['木','火'],
+  unfavorable:['水','金','土']
+};
+
+/* ---------- rendering ---------- */
+
+const WEEKDAY_EN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function fmtPillarCell(p){
+  const stemEl = STEM_EL[STEMS.indexOf(p.stem)];
+  const branchEl = BRANCH_EL[BRANCHES.indexOf(p.branch)];
+  return `<div class="stem char-${stemEl}">${p.stem}</div><div class="branch char-${branchEl}">${p.branch}</div>`;
+}
+
+/* ---------- personal profile: life-domain advice by dominant element ---------- */
+const DIRECTION_BY_EL = {木:'East', 火:'South', 土:'Southwest / center', 金:'West', 水:'North'};
+
+const PERSONAL_ADVICE = {
+  木: {
+    focus: 'Career & creativity: Wood favors growth and new ideas — a good day to plan a new lesson, script a video, or sketch a new educational tool or app.',
+    father: 'Family: explore something new with your sons — a book, a place, a question — Wood favors shared curiosity and learning together.',
+    spirit: 'Spiritual practice: a good day to set fresh intentions in meditation or journaling, and to read something that expands your thinking.',
+    protect: 'Protect your peace: put today\'s expansive energy into your own projects rather than into re-litigating old arguments at home.'
+  },
+  火: {
+    focus: 'Career & creativity: Fire matches your day master directly — a strong day for teaching, presenting, recording content, or speaking in front of others.',
+    father: 'Family: your natural warmth is amplified — a good day for storytelling, laughter, or an outing with your sons.',
+    spirit: 'Spiritual practice: chanting or an expressive practice may suit today better than silent sitting alone.',
+    protect: 'Protect your peace: Fire days can tip into impatience under provocation — pause before responding to any conflict at home.'
+  },
+  土: {
+    focus: 'Career & creativity: favor organizing, planning, and administrative work today over launching something bold and new.',
+    father: 'Family: a steady, unhurried day — good for routine bonding: a meal together, homework help, quiet presence.',
+    spirit: 'Spiritual practice: grounding practices suit today — walking meditation, gratitude journaling, simple present-moment awareness.',
+    protect: 'Protect your peace: Earth days can feel heavy — conserve your emotional energy and postpone heavy conversations at home if you can.'
+  },
+  金: {
+    focus: 'Career & creativity: good for editing, refining, and finishing — polishing a lesson, tightening a video edit, making a decision you\'ve been putting off.',
+    father: 'Family: a good day to hold a clear, loving boundary or routine with your sons rather than open-ended play.',
+    spirit: 'Spiritual practice: Metal favors discernment — useful for honest journaling about what needs to be released.',
+    protect: 'Protect your peace: Metal can sharpen words on both sides — if conflict arises at home, favor brevity and calm over debate.'
+  },
+  水: {
+    focus: 'Career & creativity: better for research, reading, and quiet preparation than for high-visibility teaching or content creation today.',
+    father: 'Family: a gentler day — a bedtime story or simply being present matters more than an outing.',
+    spirit: 'Spiritual practice: this is naturally your best day for meditation, chanting, and reflection — lean into it fully.',
+    protect: 'Protect your peace: Water days draw heavily on your Fire day master — guard your energy carefully and step back from anything that invites conflict at home.'
+  }
+};
+
+function pickDominantElement(a,b,c){
+  const counts={};
+  [a,b,c].forEach(e=>{ counts[e]=(counts[e]||0)+1; });
+  let best=a, bestCount=0;
+  [a,b,c].forEach(e=>{ if(counts[e]>bestCount){ best=e; bestCount=counts[e]; } });
+  return best;
+}
+
+/* ---------- power moves & mantra by dominant element ---------- */
+const WINDOW_BY_EL   = {木:'5 AM – 7 AM', 火:'11 AM – 1 PM', 土:'1 PM – 3 PM', 金:'5 PM – 7 PM', 水:'9 PM – 11 PM'};
+const CAUTION_WINDOW  = {木:'before 9 AM', 火:'before your peak window', 土:'before midday', 金:'before 9 AM', 水:'before 9 AM'};
+
+const POWER_ACTION = {
+  木: 'Start your most important lesson-planning or creative task first — don\'t scroll or reply to messages before you create.',
+  火: 'Teach your best lesson, record your video, or speak up — this is your peak window for visibility and presence.',
+  土: 'Batch your admin, organizing, and planning — build structure before anything else today.',
+  金: 'Finish and polish one unfinished task completely — don\'t start anything new in this window.',
+  水: 'Protect this window for meditation, journaling, or quiet reading — resist the pull to overcommit.'
+};
+const POWER_CAUTION = {
+  木: 'expansive Wood energy can turn small talk into scattered ideas',
+  火: 'Fire that flares too soon burns out by midday',
+  土: 'Earth needs time to settle before it can hold real weight',
+  金: 'Metal\'s sharp edge can turn small talk into unintended cuts',
+  水: 'today\'s Water energy scatters focus easily'
+};
+const MANTRA_BY_EL = {
+  木: 'Growth is quiet before it is visible — trust the seeds you are planting.',
+  火: 'Let your light lead without needing to prove itself.',
+  土: 'Stillness is not delay — it is preparation.',
+  金: 'Precision is a form of compassion — cut cleanly, then let go.',
+  水: 'Protect your light — not every wave needs to be met head-on.'
+};
+
+function buildPowerMoves(dominant, favHits){
+  const move1 = `${WINDOW_BY_EL[dominant]} → Face ${DIRECTION_BY_EL[dominant]} → ${POWER_ACTION[dominant]}`;
+  const move2 = `Keep calls and messages brief ${CAUTION_WINDOW[dominant]} — ${POWER_CAUTION[dominant]}`;
+  let move3;
+  if(favHits<=1){
+    move3 = `Delay any "final answer" to others until tomorrow morning — today's chart pressures your Fire day master, so you'll feel pushed to decide, but it's a trap.`;
+  } else {
+    move3 = `If a decision has felt ready, today supports committing to it — the day's energy backs follow-through rather than more deliberation.`;
+  }
+  return [move1, move2, move3];
+}
+
+function buildAdvice(dayStemEl, dayBranchEl, qimenEl, natalNotes){
+  const dominant = pickDominantElement(dayStemEl,dayBranchEl,qimenEl);
+  const a = PERSONAL_ADVICE[dominant];
+  const list = [
+    a.focus,
+    a.father,
+    a.spirit,
+    a.protect,
+    `Direction & energy: ${DIRECTION_BY_EL[dominant]} is a supportive direction today — worth favoring for a walk, meditation spot, or focused work session.`
+  ];
+  Object.values(natalNotes).forEach(n=>{ if(n) list.push(n); });
+  return list;
+}
+
+function render(y,m,d){
+  const bazi = getBaziForDate(y,m,d);
+  const dateObj = new Date(Date.UTC(y,m-1,d));
+  const weekday = WEEKDAY_EN[dateObj.getUTCDay()];
+
+  document.getElementById('gregLine').textContent = `${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y} (${weekday.slice(0,3)})`;
+  const lunarStr = `Lunar date: ${bazi.lunar.isLeap?'Leap ':''}${LUNAR_MONTH_NAMES[bazi.lunar.monthNumber-1]} ${LUNAR_DAY_NAMES[bazi.lunar.lunarDay-1]}`;
+  document.getElementById('lunarLine').textContent = lunarStr;
+
+  /* pillars grid — selected day's chart only */
+  const grid = document.getElementById('pillarsGrid');
+  grid.innerHTML = `
+    <div class="head">Year</div><div class="head">Month</div><div class="head">Day</div>
+
+    <div class="cell today">${fmtPillarCell(bazi.year)}</div>
+    <div class="cell today">${fmtPillarCell(bazi.month)}</div>
+    <div class="cell today">${fmtPillarCell(bazi.day)}</div>
+  `;
+
+  /* analysis / verdict */
+  const dayStemEl = STEM_EL[STEMS.indexOf(bazi.day.stem)];
+  const dayBranchEl = BRANCH_EL[BRANCHES.indexOf(bazi.day.branch)];
+  const qimenEl = bazi.qimen.element;
+  const favSet = new Set(NATAL.favorable);
+  let favHits=0, total=0;
+  [dayStemEl,dayBranchEl,qimenEl].forEach(e=>{ total++; if(favSet.has(e)) favHits++; });
+
+  let verdictTag, verdictText;
+  if(favHits>=2){
+    verdictTag='Supportive Day';
+    verdictText='Today\'s energy leans toward Wood (木) and Fire (火), which strengthens your naturally weak 丙 Fire day master. A good day to advance your teaching, content creation, or Master Teacher path with confidence.';
+  } else if(favHits===1){
+    verdictTag='Mixed / Wait-and-See';
+    verdictText='Today\'s elements are mixed. Your chart already runs heavy in Water and Metal against a weak day master, so today brings both some support and some drag — choose where to invest your energy rather than pushing on every front.';
+  } else {
+    verdictTag='Inward-Facing Day';
+    verdictText='Today leans toward Water (水), Metal (金), and Earth (土), which further pressures your already-weak day master. Favor rest, reflection, and protecting your peace over ambitious pushes.';
+  }
+  document.getElementById('verdictTag').textContent = verdictTag;
+  document.getElementById('verdictText').textContent = verdictText;
+
+  /* specific stem/branch interaction notes with the natal day pillar (丙申) */
+  const notes = {};
+  if(bazi.day.stem==='辛'){ notes.he = 'Today\'s stem is 辛, which combines with your day master 丙 (丙辛合水 — "Bing-Xin combine into Water"). Situations that seemed clear-cut may shift, and it\'s easy to compromise in conversation — but the combination also generates more Water, adding drain. Be clear on your own intention before agreeing to anything, especially at home.'; }
+  if(bazi.day.stem==='壬'){ notes.chong = 'Today\'s stem is 壬, which clashes with your day master 丙 (丙壬冲 — "Bing-Ren clash"). Expect friction with your mood or surroundings; helpful for breaking a stalemate in your own work, but not a day to force a confrontation at home.'; }
+  if(bazi.day.branch==='巳'){ notes.branchHe = 'Today\'s branch is 巳, which combines with your natal day branch 申 into Water (巳申合化水). Your chart is already Water-heavy, so this adds even more — watch for physical and emotional overextension, and protect your rest.'; }
+  if(bazi.day.branch==='寅'){ notes.branchChong = 'Today\'s branch is 寅, which clashes with your natal day branch 申 (寅申冲). Expect travel, change, or friction in conversation — stay flexible rather than digging in, especially in family discussions.'; }
+  if(bazi.day.branch==='亥'){ notes.branchHai = 'Today\'s branch is 亥, which harms your natal day branch 申 (申亥害). Close relationships may develop quiet friction — be explicit rather than leaving things ambiguous, and give yourself permission to step back if needed.'; }
+  const interactionEls = Object.values(notes);
+  document.getElementById('interactionText').innerHTML = interactionEls.length
+    ? interactionEls.map(t=>`<p>${t}</p>`).join('')
+    : '<p>No notable combination, clash, punishment, or harm between today\'s pillar and your natal day pillar (丙申). Today\'s influence works mainly through the general five-element relationships covered above.</p>';
+
+  /* advice list */
+  const advice = buildAdvice(dayStemEl, dayBranchEl, qimenEl, notes);
+  document.getElementById('adviceList').innerHTML = advice.map(a=>`<li><span class="mark">◆</span><span>${a}</span></li>`).join('');
+
+  /* power moves + mantra */
+  const dominant = pickDominantElement(dayStemEl, dayBranchEl, qimenEl);
+  const moves = buildPowerMoves(dominant, favHits);
+  document.getElementById('powerMoves').innerHTML = moves.map(mv=>`<li><span>${mv}</span></li>`).join('');
+  document.getElementById('mantraText').textContent = MANTRA_BY_EL[dominant];
+}
+
+/* ---------- init ---------- */
+function pad(n){ return String(n).padStart(2,'0'); }
+
+function today(){
+  const now = new Date();
+  return {y:now.getFullYear(), m:now.getMonth()+1, d:now.getDate()};
+}
+
+const picker = document.getElementById('datePicker');
+function setPickerToday(){
+  const t = today();
+  picker.value = `${t.y}-${pad(t.m)}-${pad(t.d)}`;
+}
+setPickerToday();
+render(today().y, today().m, today().d);
+
+document.getElementById('goBtn').addEventListener('click', ()=>{
+  const [yy,mm,dd] = picker.value.split('-').map(Number);
+  if(yy && mm && dd) render(yy,mm,dd);
+});
+document.getElementById('todayBtn').addEventListener('click', ()=>{
+  setPickerToday();
+  const t=today();
+  render(t.y,t.m,t.d);
+});
+</script>
+</body>
+</html>
