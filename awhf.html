@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Applied Wisdom — Bernard's Programme</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231C2321'/%3E%3Ccircle cx='16' cy='16' r='2.6' fill='%23EDE7D8'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%237C9968' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='11.5' fill='none' stroke='%23CBA135' stroke-width='2.4' stroke-dasharray='44 28' stroke-linecap='round'/%3E%3C/svg%3E" />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  * { box-sizing: border-box; }
+  :root {
+    --ink: #1C2321;
+    --panel: #232B27;
+    --panel-2: #2A332D;
+    --line: #3A433C;
+    --parchment: #EDE7D8;
+    --moss: #7C9968;
+    --moss-bright: #9BB683;
+    --rust: #B36A34;
+    --gold: #CBA135;
+    --ash: #9AA096;
+  }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--ink);
+    color: var(--parchment);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding-bottom: 48px;
+  }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  button { font: inherit; }
+  ul { margin: 0; }
+
+  .hero { padding: 36px 20px 24px; max-width: 760px; margin: 0 auto; text-align: center; }
+  .hero-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ash); margin-bottom: 14px;
+  }
+  .hero h1 {
+    font-family: 'Fraunces', serif; font-weight: 500;
+    font-size: clamp(28px, 6vw, 40px); line-height: 1.15;
+    margin: 0 0 6px; color: var(--parchment);
+  }
+
+  .rings-wrap { display: flex; justify-content: center; margin: 22px 0 8px; }
+  .rings-caption { text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ash); margin-bottom: 8px; }
+  .rings-caption strong { color: var(--gold); }
+
+  nav.tabs {
+    display: flex; gap: 6px; overflow-x: auto;
+    padding: 8px 16px 14px; max-width: 900px; margin: 0 auto;
+    scrollbar-width: none;
+  }
+  nav.tabs::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex: 0 0 auto; font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    letter-spacing: 0.04em; padding: 9px 14px; border-radius: 999px;
+    border: 1px solid var(--line); background: transparent; color: var(--ash);
+    cursor: pointer; white-space: nowrap; transition: all 0.15s ease;
+  }
+  .tab-btn:hover { border-color: var(--moss); color: var(--parchment); }
+  .tab-btn[data-active="true"] { background: var(--moss); border-color: var(--moss); color: #16211A; font-weight: 600; }
+
+  main { max-width: 700px; margin: 0 auto; padding: 8px 16px 40px; }
+
+  .season-heading { margin: 18px 2px 16px; }
+  .season-heading .roman { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--gold); letter-spacing: 0.1em; }
+  .season-heading h2 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 24px; margin: 4px 0 2px; }
+  .season-heading .season-tag { font-size: 13px; color: var(--ash); font-style: italic; }
+  .season-heading[data-clickable="true"] { cursor: pointer; }
+
+  .mod-card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+  .mod-card[data-capstone="true"] { border-color: var(--rust); background: linear-gradient(180deg, #2A2621, var(--panel) 40%); }
+  .mod-card[data-done="true"] { border-color: var(--moss); }
+
+  .mod-head {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; background: none; border: none; padding: 16px 16px;
+    cursor: pointer; text-align: left; color: inherit;
+  }
+  .mod-head-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .mod-code { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ash); letter-spacing: 0.04em; }
+  .mod-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; color: var(--parchment); }
+  .chevron { color: var(--ash); transition: transform 0.2s ease; flex-shrink: 0; }
+  .chevron[data-open="true"] { transform: rotate(180deg); }
+
+  .mod-note { margin: -6px 16px 14px; font-size: 13px; font-style: italic; color: var(--gold); }
+
+  .mod-body { padding: 0 16px 18px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .capstone-question {
+    font-family: 'Fraunces', serif; font-style: italic; font-size: 18px; line-height: 1.5;
+    color: var(--gold); margin: 0 0 18px; padding-left: 12px; border-left: 2px solid var(--rust);
+    display: flex; gap: 8px;
+  }
+  .capstone-icon { flex-shrink: 0; margin-top: 4px; color: var(--rust); }
+
+  .mod-section { margin-bottom: 16px; }
+  .mod-section h4 {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--ash); margin: 0 0 8px;
+  }
+  .mod-section ul { padding-left: 18px; }
+  .mod-section li { font-size: 14px; line-height: 1.6; color: var(--parchment); }
+  .texts-list li { color: var(--ash); font-style: italic; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 12px; padding: 5px 10px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: var(--moss-bright); }
+
+  .mod-work { background: var(--panel-2); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; }
+  .mod-work-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--rust); }
+  .mod-work p { margin: 6px 0 0; font-size: 14px; line-height: 1.6; color: var(--parchment); }
+
+  .grow-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.04em;
+    padding: 9px 14px; border-radius: 999px; border: 1px solid var(--moss);
+    background: transparent; color: var(--moss-bright); cursor: pointer; transition: all 0.15s ease;
+  }
+  .grow-btn:hover { background: rgba(124,153,104,0.12); }
+  .grow-btn[data-done="true"] { background: var(--moss); color: #16211A; font-weight: 600; }
+
+  .elective-grid { display: flex; flex-direction: column; gap: 10px; }
+  .elective-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .elective-card .mod-code { display: block; margin-bottom: 4px; }
+  .elective-card .mod-title { font-size: 15px; }
+  .elective-note { font-size: 12px; color: var(--ash); font-style: italic; margin-top: 6px; }
+
+  .grad-list { display: flex; flex-direction: column; gap: 10px; }
+  .grad-item { display: flex; align-items: flex-start; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .grad-toggle {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--moss);
+    background: transparent; color: var(--moss-bright); display: flex; align-items: center;
+    justify-content: center; cursor: pointer; margin-top: 2px;
+  }
+  .grad-toggle[data-yes="true"] { background: var(--moss); color: #16211A; }
+  .grad-domain { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold); margin-bottom: 3px; }
+  .grad-q { font-family: 'Fraunces', serif; font-size: 15px; line-height: 1.5; }
+  .grad-summary { text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ash); margin-bottom: 16px; }
+  .grad-summary strong { color: var(--gold); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+/* ------------------------------------------------------------------ */
+/*  Data                                                               */
+/* ------------------------------------------------------------------ */
+
+const SEMESTERS = [
+  {
+    id: "s1", roman: "I", name: "Foundations", season: "Sowing",
+    modules: [
+      {
+        code: "MAWH501", title: "Human Flourishing & Character",
+        outcomes: ["Develop a personal philosophy of life.", "Clarify core values and purpose.", "Build habits aligned with long-term identity."],
+        topics: ["Identity-based habits", "Virtue ethics", "Purpose", "Time horizons", "Legacy thinking"],
+        list: { heading: "Core Texts", items: ["Atomic Habits — James Clear", "The 7 Habits of Highly Effective People — Stephen Covey", "Man's Search for Meaning — Viktor Frankl"] },
+        work: { label: "Assessment", body: "Write your Personal Constitution (5–10 pages), including your guiding principles and vision for the next 20 years." },
+      },
+      {
+        code: "MAWH502", title: "Emotional Resilience Under Adversity",
+        note: "Especially relevant to your circumstances.",
+        outcomes: ["Respond rather than react.", "Build emotional independence.", "Maintain inner peace in difficult relationships."],
+        topics: ["Stoicism", "Cognitive reframing", "Boundaries", "Narcissistic dynamics", "Radical acceptance"],
+        list: { heading: "Core Texts", items: ["The Obstacle Is the Way — Ryan Holiday", "The Daily Stoic — Ryan Holiday", "Adult Children of Emotionally Immature Parents — Lindsay C. Gibson"] },
+        work: { label: "Assessment", body: "Maintain a daily \u201cResponse Journal\u201d documenting how you chose your responses during challenging interactions." },
+      },
+    ],
+  },
+  {
+    id: "s2", roman: "II", name: "Mind & Systems", season: "Rooting",
+    modules: [
+      {
+        code: "MAWH511", title: "AI-Augmented Intelligence",
+        outcomes: ["Master AI as a thinking partner.", "Design AI workflows.", "Build personal AI systems."],
+        topics: ["Prompt engineering", "Knowledge management", "AI tutoring", "AI agents", "Workflow automation"],
+        list: { heading: "Resources", items: ["Ethan Mollick — writings & talks", "Andrej Karpathy — educational content", "OpenAI documentation & tutorials"] },
+        work: { label: "Project", body: "Create your personal AI Operating System for teaching and knowledge work." },
+      },
+      {
+        code: "MAWH512", title: "Building a Second Brain",
+        outcomes: ["Build a lifelong knowledge system.", "Capture and retrieve ideas effectively.", "Transform information into assets."],
+        topics: [],
+        list: { heading: "Core Text", items: ["Building a Second Brain — Tiago Forte"] },
+        work: { label: "Assessment", body: "Develop a searchable knowledge repository containing lesson resources, AI prompts, reflections, and reusable content." },
+      },
+    ],
+  },
+  {
+    id: "s3", roman: "III", name: "Education & Influence", season: "Budding",
+    modules: [
+      {
+        code: "MAWH601", title: "Learning Science for Expert Teachers",
+        outcomes: [],
+        topics: ["Retrieval practice", "Cognitive load", "Spaced repetition", "Metacognition", "Motivation"],
+        list: { heading: "Authors", items: ["John Sweller", "Dylan Wiliam", "Barbara Oakley", "Justin Sung"] },
+        work: { label: "Project", body: "Design the ultimate AI-powered O-Level Chemistry course." },
+      },
+      {
+        code: "MAWH602", title: "Creating Educational Assets",
+        outcomes: ["Build scalable teaching resources.", "Develop evergreen educational content.", "Reach learners beyond the classroom."],
+        topics: ["YouTube", "Digital courses", "Community building", "Educational design"],
+        list: null,
+        work: { label: "Assessment", body: "Publish one high-quality educational resource every month." },
+      },
+    ],
+  },
+  {
+    id: "s4", roman: "IV", name: "Spiritual Formation", season: "Flowering",
+    modules: [
+      {
+        code: "MAWH701", title: "Ancient Wisdom for Modern Life",
+        outcomes: [],
+        topics: ["Stoicism", "Christian spirituality", "Eastern philosophy", "Humility", "Service"],
+        list: { heading: "Core Texts", items: ["Meditations — Marcus Aurelius", "The Return of the Prodigal Son — Henri Nouwen", "The Ruthless Elimination of Hurry — John Mark Comer"] },
+        work: { label: "Assessment", body: "Develop a sustainable Rule of Life, outlining daily, weekly, monthly, and yearly spiritual rhythms." },
+      },
+      {
+        code: "MAWH702", title: "Leadership Through Service",
+        outcomes: [],
+        topics: ["Servant leadership", "Mentorship", "Influence", "Character"],
+        list: { heading: "Books", items: ["Good to Great — Jim Collins", "Leaders Eat Last — Simon Sinek"] },
+        work: { label: "Project", body: "Mentor three younger teachers over the course of a year." },
+      },
+    ],
+  },
+  {
+    id: "s5", roman: "V", name: "Creativity & Legacy", season: "Fruiting",
+    modules: [
+      {
+        code: "MAWH801", title: "The Creative Life",
+        outcomes: [],
+        topics: ["Music", "Writing", "Flow", "Creative resistance", "Artistic practice"],
+        list: { heading: "Books", items: ["The War of Art — Steven Pressfield", "Big Magic — Elizabeth Gilbert"] },
+        work: { label: "Project", body: "Produce a portfolio of creative works, such as ambient music or educational media." },
+      },
+      {
+        code: "MAWH802", title: "Legacy Systems", capstone: true,
+        question: "If I retired tomorrow, what would continue growing without me?",
+        outcomes: [], topics: [], list: null,
+        work: { label: "Capstone Project", body: "Build an integrated educational ecosystem that includes an AI tutor, a complete O-Level Chemistry curriculum, a website, a YouTube channel, teacher resources, and a student revision system." },
+      },
+    ],
+  },
+];
+
+const ELECTIVES = [
+  { code: "MAWH821", title: "Family Leadership & Parenting" },
+  { code: "MAWH822", title: "Personal Finance & Stewardship" },
+  { code: "MAWH823", title: "Communication & Conflict Management" },
+  { code: "MAWH824", title: "Music, Beauty & Aesthetics" },
+  { code: "MAWH825", title: "Chinese Philosophy & BaZi as a Reflective Practice" },
+  { code: "MAWH826", title: "Mindfulness, Contemplation & Silence" },
+];
+
+const GRADUATION = [
+  { domain: "Character", question: "Am I calmer, wiser, and less reactive than five years ago?" },
+  { domain: "Family", question: "Have I created a stable, loving environment for my children despite challenges?" },
+  { domain: "Teaching", question: "Have I transformed my expertise into systems that outlast my daily effort?" },
+  { domain: "Legacy", question: "Have I built resources that continue helping others even when I'm not present?" },
+  { domain: "Spirituality", question: "Is my inner peace less dependent on external circumstances?" },
+  { domain: "Creativity", question: "Have I consistently created rather than merely consumed?" },
+];
+
+const ALL_CODES = SEMESTERS.flatMap(s => s.modules.map(m => m.code));
+
+/* ------------------------------------------------------------------ */
+/*  State + persistence (localStorage — this is a standalone page)     */
+/* ------------------------------------------------------------------ */
+
+function loadSet(key) {
+  try { return new Set(JSON.parse(localStorage.getItem(key) || "[]")); }
+  catch { return new Set(); }
+}
+function saveSet(key, set) {
+  try { localStorage.setItem(key, JSON.stringify([...set])); } catch {}
+}
+
+const state = {
+  tab: "overview",
+  completed: loadSet("awp-completed-modules"),
+  gradYes: loadSet("awp-graduation-yes"),
+  openModules: new Set(),
+};
+
+/* ------------------------------------------------------------------ */
+/*  Icons (inline SVG, no dependency)                                  */
+/* ------------------------------------------------------------------ */
+
+const icon = {
+  circle: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>`,
+  check: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>`,
+  chevron: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>`,
+  sparkles: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>`,
+};
+
+/* ------------------------------------------------------------------ */
+/*  Growth rings SVG                                                   */
+/* ------------------------------------------------------------------ */
+
+function growthRingsSVG() {
+  const fractions = SEMESTERS.map(s => {
+    const done = s.modules.filter(m => state.completed.has(m.code)).length;
+    return s.modules.length ? done / s.modules.length : 0;
+  });
+  const size = 168, cx = size / 2, cy = size / 2, base = 20, step = 14;
+  const colors = ["#8FA37A", "#7C9968", "#CBA135", "#B36A34", "#D98A46"];
+
+  let circles = `<circle cx="${cx}" cy="${cy}" r="4" fill="#EDE7D8" opacity="0.9" />`;
+  fractions.forEach((f, i) => {
+    const r = base + i * step;
+    const circumference = 2 * Math.PI * r;
+    const dash = circumference * f;
+    circles += `
+      <g transform="rotate(-90 ${cx} ${cy})">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#3A433C" stroke-width="5" />
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${colors[i % colors.length]}" stroke-width="5"
+          stroke-linecap="round" stroke-dasharray="${dash} ${circumference - dash}"
+          style="transition: stroke-dasharray 0.6s ease" />
+      </g>`;
+  });
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="Growth across five seasons">${circles}</svg>`;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Render helpers                                                     */
+/* ------------------------------------------------------------------ */
+
+function moduleCardHTML(m) {
+  const isDone = state.completed.has(m.code);
+  const isOpen = state.openModules.has(m.code);
+  let body = "";
+  if (isOpen) {
+    body += `<div class="mod-body">`;
+    if (m.capstone) {
+      body += `<blockquote class="capstone-question"><span class="capstone-icon">${icon.sparkles}</span>"${m.question}"</blockquote>`;
+    }
+    if (m.outcomes.length) {
+      body += `<div class="mod-section"><h4>Learning outcomes</h4><ul>${m.outcomes.map(o => `<li>${o}</li>`).join("")}</ul></div>`;
+    }
+    if (m.topics.length) {
+      body += `<div class="mod-section"><h4>Topics</h4><div class="chips">${m.topics.map(t => `<span class="chip">${t}</span>`).join("")}</div></div>`;
+    }
+    if (m.list) {
+      body += `<div class="mod-section"><h4>${m.list.heading}</h4><ul class="texts-list">${m.list.items.map(t => `<li>${t}</li>`).join("")}</ul></div>`;
+    }
+    body += `<div class="mod-work"><span class="mod-work-label">${m.work.label}</span><p>${m.work.body}</p></div>`;
+    body += `<button class="grow-btn" data-done="${isDone}" data-action="toggle-grown" data-code="${m.code}">${isDone ? icon.check : icon.circle} ${isDone ? "Grown" : "Mark as grown"}</button>`;
+    body += `</div>`;
+  }
+  return `
+    <div class="mod-card" data-capstone="${!!m.capstone}" data-done="${isDone}">
+      <button class="mod-head" data-action="toggle-open" data-code="${m.code}" aria-expanded="${isOpen}">
+        <div class="mod-head-left">
+          <span class="mod-code mono">${m.code}</span>
+          <span class="mod-title">${m.title}</span>
+        </div>
+        <span class="chevron" data-open="${isOpen}">${icon.chevron}</span>
+      </button>
+      ${m.note ? `<p class="mod-note">${m.note}</p>` : ""}
+      ${body}
+    </div>`;
+}
+
+function overviewHTML() {
+  return SEMESTERS.map(s => `
+    <div class="season-heading" data-clickable="true" data-action="go-tab" data-tab="${s.id}">
+      <span class="roman mono">Semester ${s.roman} — ${s.season}</span>
+      <h2>${s.name}</h2>
+      <span class="season-tag">${s.modules.filter(m => state.completed.has(m.code)).length} / ${s.modules.length} modules grown</span>
+    </div>`).join("");
+}
+
+function semesterHTML(s) {
+  return `
+    <div class="season-heading">
+      <span class="roman mono">Semester ${s.roman} — ${s.season}</span>
+      <h2>${s.name}</h2>
+    </div>
+    ${s.modules.map(moduleCardHTML).join("")}`;
+}
+
+function electivesHTML() {
+  return `
+    <div class="season-heading">
+      <span class="roman mono">Reflective Practice</span>
+      <h2>Elective Modules</h2>
+    </div>
+    <div class="elective-grid">
+      ${ELECTIVES.map(e => `
+        <div class="elective-card">
+          <span class="mod-code mono">${e.code}</span>
+          <span class="mod-title">${e.title}</span>
+          <div class="elective-note">Syllabus not yet detailed.</div>
+        </div>`).join("")}
+    </div>`;
+}
+
+function graduationHTML() {
+  return `
+    <div class="season-heading">
+      <span class="roman mono">Before You Call It Finished</span>
+      <h2>Graduation Requirements</h2>
+    </div>
+    <p class="grad-summary"><strong>${state.gradYes.size}</strong> of ${GRADUATION.length} answered yes</p>
+    <div class="grad-list">
+      ${GRADUATION.map(g => `
+        <div class="grad-item">
+          <button class="grad-toggle" data-yes="${state.gradYes.has(g.domain)}" data-action="toggle-grad" data-domain="${g.domain}"
+            aria-label="${state.gradYes.has(g.domain) ? "Marked yes" : "Mark yes"}">
+            ${state.gradYes.has(g.domain) ? icon.check : icon.circle}
+          </button>
+          <div>
+            <div class="grad-domain mono">${g.domain}</div>
+            <div class="grad-q">${g.question}</div>
+          </div>
+        </div>`).join("")}
+    </div>`;
+}
+
+function tabsHTML() {
+  const tabs = [{ id: "overview", label: "Overview" }]
+    .concat(SEMESTERS.map(s => ({ id: s.id, label: `${s.roman} · ${s.season}` })))
+    .concat([{ id: "electives", label: "Electives" }, { id: "graduation", label: "Graduation" }]);
+  return tabs.map(t => `<button class="tab-btn" data-active="${state.tab === t.id}" data-action="go-tab" data-tab="${t.id}">${t.label}</button>`).join("");
+}
+
+function mainHTML() {
+  if (state.tab === "overview") return overviewHTML();
+  if (state.tab === "electives") return electivesHTML();
+  if (state.tab === "graduation") return graduationHTML();
+  const s = SEMESTERS.find(s => s.id === state.tab);
+  return s ? semesterHTML(s) : overviewHTML();
+}
+
+function render() {
+  const totalDone = state.completed.size;
+  const totalCount = ALL_CODES.length;
+  document.getElementById("root").innerHTML = `
+    <header class="hero">
+      <div class="hero-eyebrow mono">Welcome back, Bernard</div>
+      <h1>Applied Wisdom for Human Flourishing</h1>
+      <div class="rings-wrap">${growthRingsSVG()}</div>
+      <div class="rings-caption"><strong>${totalDone}</strong> of ${totalCount} modules grown</div>
+    </header>
+    <nav class="tabs">${tabsHTML()}</nav>
+    <main>${mainHTML()}</main>
+  `;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Event delegation                                                   */
+/* ------------------------------------------------------------------ */
+
+document.getElementById("root").addEventListener("click", (e) => {
+  const el = e.target.closest("[data-action]");
+  if (!el) return;
+  const action = el.dataset.action;
+
+  if (action === "go-tab") {
+    state.tab = el.dataset.tab;
+  } else if (action === "toggle-open") {
+    const code = el.dataset.code;
+    state.openModules.has(code) ? state.openModules.delete(code) : state.openModules.add(code);
+  } else if (action === "toggle-grown") {
+    const code = el.dataset.code;
+    state.completed.has(code) ? state.completed.delete(code) : state.completed.add(code);
+    saveSet("awp-completed-modules", state.completed);
+  } else if (action === "toggle-grad") {
+    const domain = el.dataset.domain;
+    state.gradYes.has(domain) ? state.gradYes.delete(domain) : state.gradYes.add(domain);
+    saveSet("awp-graduation-yes", state.gradYes);
+  }
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
