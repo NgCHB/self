@@ -658,7 +658,7 @@ function buildLinePreviewHTML(entry, lineIndex){
     }
     if(i < entry.chars.length) inner += escapeHtml(entry.chars[i]);
   }
-  return `<div class="line${entry.flagged ? " flagged" : ""}">  ${inner}</div>\n`;
+  return `<div class="line${entry.flagged ? " flagged" : ""}">${inner}</div>\n`;
 }
 
 function updateToolbar(){
@@ -701,7 +701,7 @@ function renderOutput(){
   state.lines.forEach((entry, idx) => {
     if(entry.flagged) flagged++;
     previewHtml += buildLinePreviewHTML(entry, idx);
-    rawText += "  " + buildLineString(entry) + "\n";
+    rawText += buildLineString(entry) + "\n";
   });
 
   previewHtml += '<div class="meta">&lt;/div&gt;</div>';
