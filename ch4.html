@@ -366,6 +366,7 @@
     <input type="number" id="cjkWidth" value="2.3" step="0.1" min="1" max="4">
   </label>
   <span style="font-size:12px;color:var(--ink-dim);">tune if chords land a syllable early/late — or just click a chord and nudge it</span>
+  <span style="font-size:12px;color:var(--ink-dim);">for OCR: crop tight, shoot straight-on in good light, avoid glare/blur</span>
   <div class="flag-badge" id="flagBadge" style="display:none;">
     <span class="dot"></span><span id="flagCount">0</span> line(s) flagged for review
   </div>
@@ -797,7 +798,71 @@ function nudgeChord(lineIndex, chordId, dir, unit){
   renderOutput();
 }
 
-// --- Screenshot OCR ---
+// Upscales small/low-res images and stretches contrast to pure black/white
+// grayscale before OCR. Screenshots and phone photos of chord sheets are
+// often low-contrast or undersized, and Tesseract's accuracy drops sharply
+// below ~150-200dpi-equivalent text height - this cheap canvas pass fixes
+// both without needing any external image library.
+async function preprocessForOcr(fileOrBlob){
+  const bitmap = await createImageBitmap(fileOrBlob);
+  const scale = bitmap.width < 1400 ? Math.min(3, 1400 / bitmap.width) : 1;
+  const w = Math.max(1, Math.round(bitmap.width * scale));
+  const h = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(bitmap, 0, 0, w, h);
+
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const d = imgData.data;
+  const gray = new Uint8ClampedArray(w * h);
+  let lo = 255, hi = 0;
+  for(let i=0, p=0; i<d.length; i+=4, p++){
+    const g = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+    gray[p] = g;
+    if(g < lo) lo = g;
+    if(g > hi) hi = g;
+  }
+  const range = Math.max(1, hi - lo);
+  for(let i=0, p=0; i<d.length; i+=4, p++){
+    const v = Math.round((gray[p] - lo) * 255 / range);
+    d[i] = d[i+1] = d[i+2] = v;
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return await new Promise((resolve) => canvas.toBlob((b) => resolve(b || fileOrBlob), "image/png"));
+}
+
+// A single OCR worker is created once and reused across pastes/uploads, so
+// language data (eng + both Chinese scripts) only downloads and loads the
+// first time in a session. Parameters are tuned for chord sheets rather
+// than prose: dictionary-based word correction is switched off (it likes
+// to "fix" chord tokens like Dm into real words), inter-word spacing is
+// preserved (the alignment logic depends on it), and page segmentation is
+// set for a single variable-width column of text rather than general
+// document layout.
+let ocrWorkerPromise = null;
+let ocrLogger = null;
+
+async function getOcrWorker(){
+  if(!ocrWorkerPromise){
+    ocrWorkerPromise = (async () => {
+      const worker = await Tesseract.createWorker("eng+chi_sim+chi_tra", 1, {
+        logger: (m) => { if(ocrLogger) ocrLogger(m); }
+      });
+      await worker.setParameters({
+        preserve_interword_spaces: "1",
+        load_system_dawg: "0",
+        load_freq_dawg: "0",
+        tessedit_pageseg_mode: "4"
+      });
+      return worker;
+    })();
+  }
+  return ocrWorkerPromise;
+}
 // Lets the user paste or drop a screenshot of a chord sheet directly into
 // the input pane. The recognized text is inserted into the textarea just
 // like a normal paste would be, then runs through the exact same
@@ -823,23 +888,24 @@ async function ocrImageToTextarea(fileOrBlob){
   if(ocrBusy) return;
   ocrBusy = true;
   ocrOverlay.classList.add("visible");
-  ocrStatus.textContent = "Reading screenshot…";
+  ocrStatus.textContent = "Preparing image…";
+  ocrLogger = (m) => {
+    if(m.status === "recognizing text" && typeof m.progress === "number"){
+      ocrStatus.textContent = "Reading screenshot… " + Math.round(m.progress * 100) + "%";
+    } else if(m.status && m.status.indexOf("loading language") === 0){
+      ocrStatus.textContent = "Loading language data (first time only)…";
+    } else if(m.status){
+      ocrStatus.textContent = m.status.charAt(0).toUpperCase() + m.status.slice(1) + "…";
+    }
+  };
   try{
     if(typeof Tesseract === "undefined"){
       throw new Error("OCR engine unavailable");
     }
-    const result = await Tesseract.recognize(fileOrBlob, "eng+chi_sim+chi_tra", {
-      logger: (m) => {
-        if(m.status === "recognizing text" && typeof m.progress === "number"){
-          ocrStatus.textContent = "Reading screenshot… " + Math.round(m.progress * 100) + "%";
-        } else if(m.status && m.status.indexOf("loading language") === 0){
-          ocrStatus.textContent = "Loading language data…";
-        } else if(m.status){
-          ocrStatus.textContent = m.status.charAt(0).toUpperCase() + m.status.slice(1) + "…";
-        }
-      }
-    });
-    let text = (result && result.data && result.data.text) ? result.data.text : "";
+    const processed = await preprocessForOcr(fileOrBlob).catch(() => fileOrBlob);
+    const worker = await getOcrWorker();
+    const { data } = await worker.recognize(processed);
+    let text = (data && data.text) ? data.text : "";
     text = text.replace(/\r\n/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/\s+$/,"");
     if(!text.trim()){
       ocrStatus.textContent = "Couldn't find any text in that image.";
