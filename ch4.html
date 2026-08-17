@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chord Sheet Converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.5/tesseract.min.js"></script>
+<style>
+  :root{
+    --bg:#FFFFFF;
+    --panel:#F7F6F3;
+    --panel-2:#F0EFEA;
+    --ink:#211F26;
+    --ink-dim:#6B6659;
+    --hairline:rgba(33,31,38,0.12);
+    --gold:#A6791E;
+    --wine:#A14A63;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+  }
+  header{
+    padding:28px clamp(16px,4vw,48px) 18px;
+    border-bottom:1px solid var(--hairline);
+  }
+  header h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:clamp(24px,3vw,32px);
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  header h1 span{ color:var(--gold); }
+  header p{
+    margin:0;
+    color:var(--ink-dim);
+    font-size:14px;
+    max-width:60ch;
+  }
+  .controls{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
+    padding:14px clamp(16px,4vw,48px);
+    border-bottom:1px solid var(--hairline);
+    background:var(--panel-2);
+  }
+  .controls label{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-dim);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .controls input[type="number"]{
+    width:64px;
+    background:var(--bg);
+    border:1px solid var(--hairline);
+    color:var(--ink);
+    border-radius:6px;
+    padding:5px 8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+  }
+  .controls input[type="number"]:focus-visible,
+  .controls-row input[type="text"]:focus-visible,
+  textarea:focus-visible,
+  button:focus-visible,
+  .chord-badge:focus-visible{
+    outline:2px solid var(--gold);
+    outline-offset:2px;
+  }
+  .controls-row input[type="text"]{
+    background:var(--bg);
+    border:1px solid var(--hairline);
+    color:var(--ink);
+    border-radius:6px;
+    padding:5px 8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+  }
+  .controls-row{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
+    padding:12px clamp(16px,4vw,48px);
+    border-bottom:1px solid var(--hairline);
+    background:var(--panel-2);
+  }
+  .controls-row label{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-dim);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .flag-badge{
+    font-size:12px;
+    color:var(--wine);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-left:auto;
+  }
+  .flag-badge .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--wine);
+    display:inline-block;
+  }
+  main{
+    flex:1;
+    display:flex;
+    flex-direction:row;
+    gap:1px;
+    background:var(--hairline);
+    min-height:0;
+  }
+  .pane{
+    background:var(--bg);
+    display:flex;
+    flex-direction:column;
+    flex:1;
+    min-width:0;
+    min-height:0;
+    overflow:hidden;
+  }
+  .pane-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 20px;
+    border-bottom:1px solid var(--hairline);
+  }
+  .pane-head h2{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    font-weight:600;
+    color:var(--ink-dim);
+    margin:0;
+  }
+  .pane-body{
+    flex:1;
+    position:relative;
+    min-height:420px;
+    overflow:hidden;
+  }
+  textarea{
+    width:100%;
+    height:100%;
+    resize:none;
+    border:none;
+    background:transparent;
+    color:var(--ink);
+    font-family:'JetBrains Mono',monospace;
+    font-size:13.5px;
+    line-height:1.7;
+    padding:20px;
+    white-space:pre;
+    overflow:auto;
+    display:block;
+  }
+
+  /* --- Nudge toolbar --- */
+  .nudge-toolbar{
+    display:none;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+    padding:10px 20px;
+    background:var(--panel-2);
+    border-bottom:1px solid var(--hairline);
+    font-family:'Inter',sans-serif;
+  }
+  .nudge-toolbar.visible{ display:flex; }
+  .nudge-label{
+    font-size:12px;
+    color:var(--ink-dim);
+  }
+  .nudge-label b{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--gold);
+    font-size:13px;
+  }
+  .nudge-btns{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .nudge-btns button{
+    background:var(--bg);
+    border:1px solid var(--hairline);
+    color:var(--ink);
+    width:30px;
+    height:28px;
+    border-radius:6px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:14px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:border-color .15s, color .15s;
+  }
+  .nudge-btns button:hover{
+    border-color:var(--gold);
+    color:var(--gold);
+  }
+  .nudge-btns button[data-action="deselect"]{
+    color:var(--wine);
+    margin-left:4px;
+  }
+  .nudge-btns button[data-action="deselect"]:hover{
+    border-color:var(--wine);
+  }
+  .nudge-hint{
+    font-size:11px;
+    color:var(--ink-dim);
+    margin-left:auto;
+  }
+
+  #output{
+    position:absolute;
+    inset:0;
+    padding:20px;
+    overflow:auto;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13.5px;
+    line-height:1.9;
+  }
+  #output .line{
+    white-space:pre-wrap;
+    padding:2px 10px 2px 12px;
+    border-left:2px solid transparent;
+    border-radius:3px;
+  }
+  #output .line.flagged{
+    border-left-color:var(--wine);
+    background:rgba(181,99,122,0.08);
+  }
+  #output .line.flagged::after{
+    content:"review";
+    float:right;
+    font-size:10px;
+    color:var(--wine);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    font-family:'Inter',sans-serif;
+  }
+  #output .chord-badge{
+    color:var(--gold);
+    font-weight:600;
+    cursor:pointer;
+    border:1px solid transparent;
+    border-radius:4px;
+    padding:0 1px;
+  }
+  #output .chord-badge:hover{
+    background:rgba(166,121,30,0.14);
+    border-color:rgba(166,121,30,0.35);
+  }
+  #output .chord-badge.selected{
+    background:var(--wine);
+    color:#fff;
+    border-color:var(--wine);
+  }
+  #output .meta{ color:var(--ink-dim); }
+  #output .placeholder{
+    color:var(--ink-dim);
+    font-family:'Inter',sans-serif;
+    font-style:italic;
+    font-size:14px;
+  }
+  button.copy-btn{
+    background:transparent;
+    border:1px solid var(--hairline);
+    color:var(--ink);
+    padding:6px 14px;
+    border-radius:20px;
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    font-weight:500;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    transition:border-color .15s, color .15s;
+  }
+  button.copy-btn:hover{
+    border-color:var(--gold);
+    color:var(--gold);
+  }
+  button.copy-btn.copied{
+    border-color:var(--gold);
+    color:var(--gold);
+    background:rgba(212,166,58,0.1);
+  }
+  ::selection{ background:rgba(212,166,58,0.25); }
+
+  .pane-body.drag-over{
+    outline:2px dashed var(--gold);
+    outline-offset:-2px;
+    background:rgba(166,121,30,0.06);
+  }
+  .ocr-overlay{
+    display:none;
+    position:absolute;
+    inset:0;
+    background:rgba(247,246,243,0.94);
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    color:var(--ink-dim);
+    z-index:5;
+    text-align:center;
+    padding:20px;
+  }
+  .ocr-overlay.visible{ display:flex; }
+  .ocr-spinner{
+    width:26px;
+    height:26px;
+    border-radius:50%;
+    border:2.5px solid var(--hairline);
+    border-top-color:var(--gold);
+    animation:ocr-spin 0.8s linear infinite;
+  }
+  @keyframes ocr-spin{ to{ transform:rotate(360deg); } }
+
+  @media (max-width: 860px){
+    body{ overflow-x:hidden; }
+    main{ flex-direction:column; }
+    .pane{ flex:none; height:46vh; }
+    .pane-body{ min-height:0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Chord Sheet <span>Converter</span></h1>
+  <p>Paste legacy chord-over-lyric HTML — or a screenshot of a chord sheet — on the left. Get inline <code>[Chord]lyric</code> notation, ready for <code>.chord-sheet</code>, on the right. Click any chord in the output to select it, then nudge it by letter or word.</p>
+</header>
+
+<div class="controls">
+  <label>CJK width
+    <input type="number" id="cjkWidth" value="2.3" step="0.1" min="1" max="4">
+  </label>
+  <span style="font-size:12px;color:var(--ink-dim);">tune if chords land a syllable early/late — or just click a chord and nudge it</span>
+  <div class="flag-badge" id="flagBadge" style="display:none;">
+    <span class="dot"></span><span id="flagCount">0</span> line(s) flagged for review
+  </div>
+</div>
+
+<div class="controls-row">
+  <label>Performance key
+    <input type="text" id="perfKey" placeholder="e.g. E" size="4">
+  </label>
+  <label>Capo line
+    <input type="text" id="capoLine" placeholder="e.g. 4 - Play C" size="16">
+  </label>
+  <label>YouTube video ID or URL
+    <input type="text" id="videoId" placeholder="e.g. GaMS0F0_xMI" size="22">
+  </label>
+  <span style="font-size:12px;color:var(--ink-dim);">leave any field blank to skip that block</span>
+</div>
+
+<main>
+  <div class="pane">
+    <div class="pane-head">
+      <h2>Legacy HTML</h2>
+      <button class="copy-btn" id="uploadBtn" type="button">
+        <span>Upload photo</span>
+      </button>
+      <input type="file" id="uploadInput" accept="image/*" style="display:none;">
+    </div>
+    <div class="pane-body" id="inputPaneBody">
+      <textarea id="input" placeholder="Paste your exported <p>/<br> chord sheet HTML here… or paste/drop a screenshot to read chords + lyrics from an image." spellcheck="false"></textarea>
+      <div class="ocr-overlay" id="ocrOverlay">
+        <div class="ocr-spinner"></div>
+        <div id="ocrStatus">Reading screenshot…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pane">
+    <div class="pane-head">
+      <h2>Converted output</h2>
+      <button class="copy-btn" id="copyBtn">
+        <span id="copyLabel">Copy</span>
+      </button>
+    </div>
+    <div class="nudge-toolbar" id="nudgeToolbar">
+      <span class="nudge-label">Selected: <b id="nudgeChordName"></b></span>
+      <div class="nudge-btns">
+        <button type="button" data-action="word" data-dir="-1" title="Move a word left">&laquo;</button>
+        <button type="button" data-action="letter" data-dir="-1" title="Move a letter left">&lsaquo;</button>
+        <button type="button" data-action="letter" data-dir="1" title="Move a letter right">&rsaquo;</button>
+        <button type="button" data-action="word" data-dir="1" title="Move a word right">&raquo;</button>
+        <button type="button" data-action="deselect" title="Deselect (Esc)">&times;</button>
+      </div>
+      <span class="nudge-hint">&larr;/&rarr; = letter &middot; Shift+&larr;/&rarr; = word</span>
+    </div>
+    <div class="pane-body">
+      <div id="output"><div class="placeholder">Converted chord-sheet HTML will appear here.</div></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const CHORD_TOKEN = "[A-G](?:#|b)?(?:maj7|maj|min7|min|m7|m|sus2|sus4|sus|dim7|dim|aug|add\\d)?\\d*(?:\\/[A-G](?:#|b)?)?";
+const CHORD_LINE_RE = new RegExp("^[\\s*]*(?:" + CHORD_TOKEN + ")(?:[\\s*]+(?:" + CHORD_TOKEN + "))*[\\s*]*$");
+
+function findChords(line){
+  const re = new RegExp(CHORD_TOKEN, "g");
+  const out = [];
+  let m;
+  while((m = re.exec(line)) !== null){
+    out.push({chord:m[0], start:m.index});
+    if(re.lastIndex === m.index) re.lastIndex++;
+  }
+  return out;
+}
+
+function decodeHtmlEntities(str){
+  const ta = document.createElement("textarea");
+  ta.innerHTML = str;
+  return ta.value;
+}
+
+function htmlToLines(html){
+  let text = html.replace(/<br\s*\/?>/gi, "\n");
+  text = text.replace(/<\/p>/gi, "\n");
+  text = text.replace(/<iframe[\s\S]*?<\/iframe>/gi, "");
+  text = text.replace(/<[^>]+>/g, "");
+  text = decodeHtmlEntities(text);
+  text = text.replace(/\u00A0/g, " ");
+  return text.split("\n").filter(l => l.trim() !== "");
+}
+
+function isChordLine(line){
+  const s = line.trim();
+  if(!s) return false;
+  return CHORD_LINE_RE.test(s) && findChords(s).length > 0;
+}
+
+function cwidth(ch, cjkWidth){
+  return ch.codePointAt(0) > 0x2E80 ? cjkWidth : 1;
+}
+
+function escapeHtml(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+let nextChordId = 1;
+
+function computeWordStarts(chars){
+  const wordStarts = [];
+  for(let i=0;i<chars.length;i++){
+    if(i===0 ? !/\s/.test(chars[0]) : (/\s/.test(chars[i-1]) && !/\s/.test(chars[i]))) wordStarts.push(i);
+  }
+  if(wordStarts.length === 0) wordStarts.push(0);
+  return wordStarts;
+}
+
+function mergeLine(chordLine, lyricLine, cjkWidth){
+  const chords = findChords(chordLine);
+  const chars = Array.from(lyricLine);
+  const wordStarts = computeWordStarts(chars);
+
+  if(chords.length === 0){
+    return {chars, wordStarts, chords: [], flagged:false};
+  }
+  if(chars.length === 0){
+    return {chars, wordStarts, chords: chords.map(c => ({id: nextChordId++, chord:c.chord, pos:0})), flagged:false};
+  }
+
+  const cum = [0];
+  for(const ch of chars) cum.push(cum[cum.length-1] + cwidth(ch, cjkWidth));
+
+  const hasCJK = chars.some(ch => ch.codePointAt(0) > 0x2E80);
+
+  if(hasCJK){
+    // CJK sheets are usually spaced with one chord-line character per lyric
+    // character, so literal position matching is the right model here.
+    const assigned = [];
+    let ci = 0;
+    for(let idx=0; idx<chars.length; idx++){
+      while(ci < chords.length && chords[ci].start < cum[idx+1]){
+        assigned.push({id: nextChordId++, chord: chords[ci].chord, pos: idx});
+        ci++;
+      }
+    }
+    let flagged = false;
+    while(ci < chords.length){
+      assigned.push({id: nextChordId++, chord: chords[ci].chord, pos: chars.length});
+      ci++;
+      flagged = true;
+    }
+    return {chars, wordStarts, chords: assigned, flagged};
+  }
+
+  // Space-delimited (e.g. English) lyric lines: chord lines like this are
+  // almost always hand-spaced for a proportional font, so a chord's raw
+  // character index rarely lines up with the matching character index in
+  // the lyric line - and chords virtually always belong on a word's first
+  // letter rather than mid-word. So: map each chord by its fractional
+  // position along the chord line onto the same fraction of the lyric
+  // line's width, then snap that position to the nearest word start.
+  const chordChars = Array.from(chordLine);
+  const chordCum = [0];
+  for(const ch of chordChars) chordCum.push(chordCum[chordCum.length-1] + cwidth(ch, cjkWidth));
+  const chordLineWidth = chordCum[chordCum.length-1] || 1;
+  const lyricLineWidth = cum[cum.length-1];
+
+  const assigned = [];
+  const seenPos = new Map();
+  let flagged = false;
+  for(const c of chords){
+    const target = (chordCum[c.start] / chordLineWidth) * lyricLineWidth;
+    let best = wordStarts[0];
+    let bestDist = Math.abs(cum[best] - target);
+    for(const ws of wordStarts){
+      const d = Math.abs(cum[ws] - target);
+      if(d < bestDist){ bestDist = d; best = ws; }
+    }
+    assigned.push({id: nextChordId++, chord: c.chord, pos: best});
+    seenPos.set(best, (seenPos.get(best) || 0) + 1);
+    if(seenPos.get(best) > 1) flagged = true;
+  }
+  return {chars, wordStarts, chords: assigned, flagged};
+}
+
+const KEY_LINE_RE = /^key\s*:/i;
+const CAPO_LINE_RE = /^capo\b/i;
+
+// The first non-chord line of a pasted sheet is treated as the composer /
+// lyricist credit line. It's pulled out of the body entirely and folded
+// into the header block (alongside Key / Capo) instead of being rendered
+// inside .chord-sheet. Each body line keeps its lyric characters, word-start
+// positions, and chords as structured data (rather than a flat merged
+// string) so chords can be nudged after the fact - the CJK-width slider
+// rarely gets every chord exactly right, and mis-landed ones can be moved
+// by hand.
+function convert(html, cjkWidth){
+  const lines = htmlToLines(html);
+  const results = [];
+  let i = 0;
+  let composerLine = "";
+  if(lines.length > 0 && !isChordLine(lines[0])){
+    composerLine = lines[0];
+    i = 1;
+  }
+  while(i < lines.length){
+    const line = lines[i];
+    let entry;
+    if(isChordLine(line) && i+1 < lines.length && !isChordLine(lines[i+1])){
+      entry = mergeLine(line, lines[i+1], cjkWidth);
+      i += 2;
+    } else if(isChordLine(line)){
+      const chords = findChords(line).map(c => ({id: nextChordId++, chord:c.chord, pos:0}));
+      entry = {chars: [], wordStarts:[0], chords, flagged: chords.length > 0};
+      i += 1;
+    } else if(KEY_LINE_RE.test(line.trim()) || CAPO_LINE_RE.test(line.trim())){
+      i += 1;
+      continue;
+    } else {
+      entry = {chars: Array.from(line), wordStarts: computeWordStarts(Array.from(line)), chords: [], flagged:false};
+      i += 1;
+    }
+    results.push(entry);
+  }
+  return {composerLine: escapeHtml(composerLine), lines: results};
+}
+
+const inputEl = document.getElementById("input");
+const outputEl = document.getElementById("output");
+const cjkWidthEl = document.getElementById("cjkWidth");
+const flagBadge = document.getElementById("flagBadge");
+const flagCount = document.getElementById("flagCount");
+const copyBtn = document.getElementById("copyBtn");
+const copyLabel = document.getElementById("copyLabel");
+const perfKeyEl = document.getElementById("perfKey");
+const capoLineEl = document.getElementById("capoLine");
+const videoIdEl = document.getElementById("videoId");
+const nudgeToolbar = document.getElementById("nudgeToolbar");
+const nudgeChordNameEl = document.getElementById("nudgeChordName");
+
+function extractYoutubeId(rawHtml){
+  const m = rawHtml.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/)
+        || rawHtml.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/)
+        || rawHtml.match(/[?&]v=([A-Za-z0-9_-]{6,})/);
+  return m ? m[1] : "";
+}
+
+function resolveVideoId(value){
+  const v = value.trim();
+  if(!v) return "";
+  // accept a bare ID, a full URL, or a mangled markdown-style paste
+  const m = v.match(/embed\/([A-Za-z0-9_-]{6,})/) || v.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/)
+        || v.match(/[?&]v=([A-Za-z0-9_-]{6,})/);
+  if(m) return m[1];
+  return v; // assume they typed a bare video ID
+}
+
+// Composer credit (auto-extracted from the pasted sheet) + Key + Capo,
+// all folded into one bold block placed just before <div class="chord-sheet">.
+function buildHeaderBlock(composer, key, capo){
+  const c = (composer || "").trim();
+  const k = key.trim();
+  if(!c && !k) return "";
+  let inner = "";
+  if(c) inner += c;
+  if(k){
+    if(c) inner += "<br><br>";
+    inner += "Key: " + k;
+    if(capo.trim()) inner += "<br>" + capo.trim();
+  }
+  return "<br><b>" + inner + "</b><br><br>";
+}
+
+function buildFooterBlock(videoField){
+  const id = resolveVideoId(videoField);
+  if(!id) return "";
+  return "<br>\n<div class=\"video-container\">\n  <iframe src=\"https://www.youtube.com/embed/" + id + "\" title=\"YouTube video player\"\n    frameborder=\"0\"\n    allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\"\n    allowfullscreen>\n  </iframe>\n</div>";
+}
+
+// --- App state ---
+// state.lines holds the *editable* chord/lyric structure produced by
+// convert(). Nudging a chord only ever mutates a chord's `pos` inside this
+// structure and re-renders - it never re-runs convert(), so manual fixes
+// survive edits to unrelated fields (key, capo, video).
+let state = { composerLine: "", headerBlock: "", footerBlock: "", lines: [], selected: null };
+let currentRawOutput = "";
+
+function fullConvert(){
+  const html = inputEl.value;
+  if(!html.trim()){
+    state = { composerLine: "", headerBlock: "", footerBlock: "", lines: [], selected: null };
+    renderOutput();
+    return;
+  }
+  const cjkWidth = parseFloat(cjkWidthEl.value) || 2.3;
+  const {composerLine, lines} = convert(html, cjkWidth);
+  state.composerLine = composerLine;
+  state.lines = lines;
+  state.selected = null;
+  state.headerBlock = buildHeaderBlock(state.composerLine, perfKeyEl.value, capoLineEl.value);
+  state.footerBlock = buildFooterBlock(videoIdEl.value);
+  renderOutput();
+}
+
+// Rebuilds only the header/footer block (Key/Capo/video). Deliberately does
+// NOT touch state.lines, so any chords you've nudged by hand stay put.
+function rebuildHeaderFooter(){
+  state.headerBlock = buildHeaderBlock(state.composerLine, perfKeyEl.value, capoLineEl.value);
+  state.footerBlock = buildFooterBlock(videoIdEl.value);
+  renderOutput();
+}
+
+// Renders one line's inline "[Chord]lyric" text (used for the copy output).
+function buildLineString(entry){
+  const chords = entry.chords.slice().sort((a,b) => a.pos - b.pos);
+  let out = "";
+  let ci = 0;
+  for(let i=0; i<=entry.chars.length; i++){
+    while(ci < chords.length && chords[ci].pos === i){
+      out += "[" + chords[ci].chord + "]";
+      ci++;
+    }
+    if(i < entry.chars.length) out += entry.chars[i];
+  }
+  return out;
+}
+
+// Renders one line as clickable chord badges + lyric text for the preview pane.
+function buildLinePreviewHTML(entry, lineIndex){
+  const chords = entry.chords.slice().sort((a,b) => a.pos - b.pos);
+  let inner = "";
+  let ci = 0;
+  for(let i=0; i<=entry.chars.length; i++){
+    while(ci < chords.length && chords[ci].pos === i){
+      const c = chords[ci];
+      const sel = state.selected && state.selected.lineIndex === lineIndex && state.selected.chordId === c.id;
+      inner += `<span class="chord-badge${sel ? " selected" : ""}" data-line="${lineIndex}" data-id="${c.id}">[${escapeHtml(c.chord)}]</span>`;
+      ci++;
+    }
+    if(i < entry.chars.length) inner += escapeHtml(entry.chars[i]);
+  }
+  return `<div class="line${entry.flagged ? " flagged" : ""}">${inner}</div>\n`;
+}
+
+function updateToolbar(){
+  let selectedChord = null;
+  if(state.selected){
+    const entry = state.lines[state.selected.lineIndex];
+    selectedChord = entry && entry.chords.find(c => c.id === state.selected.chordId);
+  }
+  if(!selectedChord){
+    if(state.selected) state.selected = null;
+    nudgeToolbar.classList.remove("visible");
+    return;
+  }
+  nudgeToolbar.classList.add("visible");
+  nudgeChordNameEl.textContent = selectedChord.chord;
+}
+
+// Re-renders the output pane from current state without recomputing chord
+// positions - safe to call after a nudge or a header/footer-only change.
+function renderOutput(){
+  if(state.lines.length === 0 && !state.headerBlock && !state.footerBlock){
+    outputEl.innerHTML = '<div class="placeholder">Converted chord-sheet HTML will appear here.</div>';
+    flagBadge.style.display = "none";
+    currentRawOutput = "";
+    updateToolbar();
+    return;
+  }
+
+  let previewHtml = "";
+  let rawText = "";
+
+  if(state.headerBlock){
+    previewHtml += `<div class="meta">${escapeHtml(state.headerBlock)}</div>\n`;
+    rawText += state.headerBlock + "\n";
+  }
+  previewHtml += '<div class="meta">&lt;div class="chord-sheet"&gt;</div>\n';
+  rawText += '<div class="chord-sheet">\n';
+
+  let flagged = 0;
+  state.lines.forEach((entry, idx) => {
+    if(entry.flagged) flagged++;
+    previewHtml += buildLinePreviewHTML(entry, idx);
+    rawText += buildLineString(entry) + "\n";
+  });
+
+  previewHtml += '<div class="meta">&lt;/div&gt;</div>';
+  rawText += '</div>';
+
+  if(state.footerBlock){
+    previewHtml += `\n<div class="meta">${escapeHtml(state.footerBlock)}</div>`;
+    rawText += state.footerBlock;
+  }
+
+  outputEl.innerHTML = previewHtml;
+  currentRawOutput = rawText;
+
+  if(flagged > 0){
+    flagBadge.style.display = "flex";
+    flagCount.textContent = flagged;
+  } else {
+    flagBadge.style.display = "none";
+  }
+
+  updateToolbar();
+}
+
+// Moves the selected chord. unit:'letter' shifts one character at a time;
+// unit:'word' jumps to the previous/next word start (or the very end of
+// the line). dir is -1 (left/earlier) or 1 (right/later).
+function nudgeChord(lineIndex, chordId, dir, unit){
+  const entry = state.lines[lineIndex];
+  if(!entry) return;
+  const chordObj = entry.chords.find(c => c.id === chordId);
+  if(!chordObj) return;
+
+  if(unit === "letter"){
+    chordObj.pos = Math.max(0, Math.min(entry.chars.length, chordObj.pos + dir));
+  } else {
+    const targets = Array.from(new Set([...entry.wordStarts, entry.chars.length])).sort((a,b) => a-b);
+    if(dir > 0){
+      const next = targets.find(t => t > chordObj.pos);
+      chordObj.pos = next !== undefined ? next : entry.chars.length;
+    } else {
+      const prevTargets = targets.filter(t => t < chordObj.pos);
+      chordObj.pos = prevTargets.length ? prevTargets[prevTargets.length - 1] : 0;
+    }
+  }
+  renderOutput();
+}
+
+// --- Screenshot OCR ---
+// Lets the user paste or drop a screenshot of a chord sheet directly into
+// the input pane. The recognized text is inserted into the textarea just
+// like a normal paste would be, then runs through the exact same
+// convert()/fullConvert() pipeline as pasted HTML - OCR text has no tags,
+// and htmlToLines() already splits on real newlines, so no separate parsing
+// path is needed.
+const ocrOverlay = document.getElementById("ocrOverlay");
+const ocrStatus = document.getElementById("ocrStatus");
+const inputPaneBody = document.getElementById("inputPaneBody");
+let ocrBusy = false;
+
+function insertAtCursor(el, text){
+  const start = (el.selectionStart != null) ? el.selectionStart : el.value.length;
+  const end = (el.selectionEnd != null) ? el.selectionEnd : el.value.length;
+  const before = el.value.slice(0, start);
+  const after = el.value.slice(end);
+  el.value = before + text + after;
+  const newPos = start + text.length;
+  el.selectionStart = el.selectionEnd = newPos;
+}
+
+async function ocrImageToTextarea(fileOrBlob){
+  if(ocrBusy) return;
+  ocrBusy = true;
+  ocrOverlay.classList.add("visible");
+  ocrStatus.textContent = "Reading screenshot…";
+  try{
+    if(typeof Tesseract === "undefined"){
+      throw new Error("OCR engine unavailable");
+    }
+    const result = await Tesseract.recognize(fileOrBlob, "eng+chi_sim+chi_tra", {
+      logger: (m) => {
+        if(m.status === "recognizing text" && typeof m.progress === "number"){
+          ocrStatus.textContent = "Reading screenshot… " + Math.round(m.progress * 100) + "%";
+        } else if(m.status && m.status.indexOf("loading language") === 0){
+          ocrStatus.textContent = "Loading language data…";
+        } else if(m.status){
+          ocrStatus.textContent = m.status.charAt(0).toUpperCase() + m.status.slice(1) + "…";
+        }
+      }
+    });
+    let text = (result && result.data && result.data.text) ? result.data.text : "";
+    text = text.replace(/\r\n/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/\s+$/,"");
+    if(!text.trim()){
+      ocrStatus.textContent = "Couldn't find any text in that image.";
+      setTimeout(() => ocrOverlay.classList.remove("visible"), 1500);
+      return;
+    }
+    const sep = inputEl.value.trim() ? "\n" : "";
+    insertAtCursor(inputEl, sep + text + "\n");
+    fullConvert();
+  }catch(err){
+    ocrStatus.textContent = "OCR failed — try pasting the text instead.";
+    setTimeout(() => ocrOverlay.classList.remove("visible"), 1800);
+    ocrBusy = false;
+    return;
+  }
+  ocrOverlay.classList.remove("visible");
+  ocrBusy = false;
+}
+
+// Image paste: textareas still receive clipboardData with image items even
+// though they only render plain text, so we intercept those before the
+// browser's default (no-op) paste handling and route them to OCR. Plain
+// text pastes fall through untouched.
+inputEl.addEventListener("paste", (e) => {
+  const items = e.clipboardData && e.clipboardData.items;
+  if(!items) return;
+  for(const item of items){
+    if(item.type && item.type.indexOf("image/") === 0){
+      e.preventDefault();
+      const file = item.getAsFile();
+      if(file) ocrImageToTextarea(file);
+      return;
+    }
+  }
+});
+
+// Drag-and-drop an image file onto the input pane.
+["dragover","dragenter"].forEach(evt => inputPaneBody.addEventListener(evt, (e) => {
+  const dt = e.dataTransfer;
+  const hasImage = dt && Array.from(dt.items || []).some(it => it.type && it.type.indexOf("image/") === 0);
+  if(hasImage){
+    e.preventDefault();
+    inputPaneBody.classList.add("drag-over");
+  }
+}));
+["dragleave","dragend"].forEach(evt => inputPaneBody.addEventListener(evt, () => {
+  inputPaneBody.classList.remove("drag-over");
+}));
+inputPaneBody.addEventListener("drop", (e) => {
+  const files = e.dataTransfer && e.dataTransfer.files;
+  const imgFile = files && Array.from(files).find(f => f.type && f.type.indexOf("image/") === 0);
+  if(imgFile){
+    e.preventDefault();
+    inputPaneBody.classList.remove("drag-over");
+    ocrImageToTextarea(imgFile);
+  }
+});
+
+// "Upload photo" button: opens the device's photo picker (gallery or
+// camera on mobile) since paste/drag-and-drop of images isn't practical
+// on touch devices. Routes the chosen file through the same OCR pipeline.
+const uploadBtn = document.getElementById("uploadBtn");
+const uploadInput = document.getElementById("uploadInput");
+uploadBtn.addEventListener("click", () => uploadInput.click());
+uploadInput.addEventListener("change", () => {
+  const file = uploadInput.files && uploadInput.files[0];
+  if(file) ocrImageToTextarea(file);
+  uploadInput.value = "";
+});
+
+// --- Wiring ---
+
+let debounceTimer;
+inputEl.addEventListener("input", () => {
+  if(!videoIdEl.value.trim()){
+    const found = extractYoutubeId(inputEl.value);
+    if(found) videoIdEl.value = found;
+  }
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(fullConvert, 120);
+});
+cjkWidthEl.addEventListener("input", fullConvert);
+perfKeyEl.addEventListener("input", rebuildHeaderFooter);
+capoLineEl.addEventListener("input", rebuildHeaderFooter);
+videoIdEl.addEventListener("input", rebuildHeaderFooter);
+
+// Click a chord badge to select/deselect it; click elsewhere to deselect.
+outputEl.addEventListener("click", (e) => {
+  const badge = e.target.closest(".chord-badge");
+  if(badge){
+    const lineIndex = parseInt(badge.dataset.line, 10);
+    const chordId = parseInt(badge.dataset.id, 10);
+    if(state.selected && state.selected.lineIndex === lineIndex && state.selected.chordId === chordId){
+      state.selected = null;
+    } else {
+      state.selected = {lineIndex, chordId};
+    }
+    renderOutput();
+  } else if(state.selected){
+    state.selected = null;
+    renderOutput();
+  }
+});
+
+// Toolbar buttons.
+nudgeToolbar.addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if(!btn || !state.selected) return;
+  if(btn.dataset.action === "deselect"){
+    state.selected = null;
+    renderOutput();
+    return;
+  }
+  nudgeChord(state.selected.lineIndex, state.selected.chordId, parseInt(btn.dataset.dir, 10), btn.dataset.action);
+});
+
+// Arrow-key nudging while a chord is selected (Shift = by word).
+document.addEventListener("keydown", (e) => {
+  if(!state.selected) return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if(tag === "TEXTAREA" || tag === "INPUT") return;
+
+  if(e.key === "ArrowLeft"){
+    e.preventDefault();
+    nudgeChord(state.selected.lineIndex, state.selected.chordId, -1, e.shiftKey ? "word" : "letter");
+  } else if(e.key === "ArrowRight"){
+    e.preventDefault();
+    nudgeChord(state.selected.lineIndex, state.selected.chordId, 1, e.shiftKey ? "word" : "letter");
+  } else if(e.key === "Escape"){
+    state.selected = null;
+    renderOutput();
+  }
+});
+
+copyBtn.addEventListener("click", async () => {
+  if(!currentRawOutput) return;
+  try{
+    await navigator.clipboard.writeText(currentRawOutput);
+  }catch(e){
+    const ta = document.createElement("textarea");
+    ta.value = currentRawOutput;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+  copyBtn.classList.add("copied");
+  copyLabel.textContent = "Copied!";
+  setTimeout(() => {
+    copyBtn.classList.remove("copied");
+    copyLabel.textContent = "Copy";
+  }, 1500);
+});
+
+renderOutput();
+</script>
+
+</body>
+</html>
