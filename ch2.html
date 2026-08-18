@@ -618,7 +618,7 @@ function fullConvert(){
     renderOutput();
     return;
   }
-  const cjkWidth = parseFloat(cjkWidthEl.value) || 2.3;
+  const cjkWidth = parseFloat(cjkWidthEl.value) || 2.6;
   const {composerLine, lines} = convert(html, cjkWidth);
   state.composerLine = composerLine;
   state.lines = lines;
