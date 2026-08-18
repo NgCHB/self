@@ -272,6 +272,7 @@
     border-left-color:var(--gold);
   }
   #output .chord-badge{
+    position:relative;
     color:var(--gold);
     font-weight:600;
     cursor:grab;
@@ -279,6 +280,14 @@
     border-radius:4px;
     padding:0 1px;
     user-select:none;
+  }
+  /* Invisible padding so the badge is much easier to hit than its visible
+     text - purely absolute-positioned, so it never nudges surrounding
+     layout or chord alignment. */
+  #output .chord-badge::before{
+    content:"";
+    position:absolute;
+    inset:-6px -4px;
   }
   #output .chord-badge:active{
     cursor:grabbing;
@@ -720,7 +729,7 @@ function buildLinePreviewHTML(entry, lineIndex){
     while(ci < chords.length && chords[ci].pos === i){
       const c = chords[ci];
       const sel = state.selected && state.selected.lineIndex === lineIndex && state.selected.chordId === c.id;
-      inner += `<span class="chord-badge${sel ? " selected" : ""}" contenteditable="false" draggable="true" data-line="${lineIndex}" data-id="${c.id}">[${escapeHtml(c.chord)}]</span>`;
+      inner += `<span class="chord-badge${sel ? " selected" : ""}" contenteditable="false" data-line="${lineIndex}" data-id="${c.id}">[${escapeHtml(c.chord)}]</span>`;
       ci++;
     }
     if(i < entry.chars.length) inner += escapeHtml(entry.chars[i]);
@@ -948,23 +957,17 @@ outputEl.addEventListener("blur", () => {
   renderOutput();
 });
 
-// Click a chord badge to select/deselect it and open the nudge toolbar;
-// click anywhere else in the text and normal editing (caret placement)
-// takes over, with just a background state sync so nudge/copy/flags stay
-// current even before the field blurs.
+// Badge selection is decided in the mousedown/mousemove/mouseup trio below
+// (so we can tell a real click apart from the start of a drag ourselves,
+// rather than relying on the browser's native click-vs-drag heuristics,
+// which is what made clicks miss so often). This click handler only
+// handles clicking elsewhere in the text: deselect, then let normal
+// contenteditable caret placement happen, with a background state sync so
+// nudge/copy/flags stay current even before the field blurs.
 outputEl.addEventListener("click", (e) => {
+  if(e.target.closest(".chord-badge")) return;
   syncStateFromOutputDom();
-  const badge = e.target.closest(".chord-badge");
-  if(badge){
-    const lineIndex = parseInt(badge.dataset.line, 10);
-    const chordId = parseInt(badge.dataset.id, 10);
-    if(state.selected && state.selected.lineIndex === lineIndex && state.selected.chordId === chordId){
-      state.selected = null;
-    } else {
-      state.selected = {lineIndex, chordId};
-    }
-    renderOutput();
-  } else if(state.selected){
+  if(state.selected){
     state.selected = null;
     updateToolbar();
   }
@@ -1003,51 +1006,73 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// --- Dragging chord badges ---
-// Badges are draggable="true" (and contenteditable="false", so native drag
-// initiation doesn't fight text-selection dragging in the surrounding
-// contenteditable region). Dropping on any line - the same one or a
-// different one - moves that chord to the pointer's character position,
-// snapped the same way clicking/typing would place it.
+// --- Selecting and dragging chord badges ---
+// Deliberately NOT native HTML5 drag/drop: inside a contenteditable region,
+// the browser's own click-vs-drag disambiguation is unreliable and was
+// swallowing plain clicks (any few-pixel wobble on mousedown got read as a
+// drag-start, so the click event never fired and the badge never got
+// selected). Instead we track mousedown -> mousemove -> mouseup ourselves:
+// if the pointer has moved past a small threshold, it's a drag; if not,
+// it's a click that toggles selection. preventDefault on mousedown also
+// keeps contenteditable's native text-selection/drag machinery out of the
+// way entirely.
+const DRAG_THRESHOLD_PX = 4;
 
-outputEl.addEventListener("dragstart", (e) => {
+outputEl.addEventListener("mousedown", (e) => {
   const badge = e.target.closest(".chord-badge");
-  if(!badge){ e.preventDefault(); return; }
+  if(!badge) return;
+  e.preventDefault();
   syncStateFromOutputDom();
   dragInfo = {
     lineIndex: parseInt(badge.dataset.line, 10),
-    chordId: parseInt(badge.dataset.id, 10)
+    chordId: parseInt(badge.dataset.id, 10),
+    startX: e.clientX,
+    startY: e.clientY,
+    dragging: false,
+    badgeEl: badge
   };
-  badge.classList.add("dragging");
-  e.dataTransfer.effectAllowed = "move";
-  try{ e.dataTransfer.setData("text/plain", ""); }catch(err){}
 });
 
-outputEl.addEventListener("dragover", (e) => {
+document.addEventListener("mousemove", (e) => {
   if(!dragInfo) return;
-  e.preventDefault();
-  e.dataTransfer.dropEffect = "move";
+  if(!dragInfo.dragging){
+    const dx = e.clientX - dragInfo.startX;
+    const dy = e.clientY - dragInfo.startY;
+    if(Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+    dragInfo.dragging = true;
+    dragInfo.badgeEl.classList.add("dragging");
+  }
   document.querySelectorAll("#output .line.drop-target").forEach(el => el.classList.remove("drop-target"));
-  const lineEl = e.target.closest(".line");
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const lineEl = el ? el.closest(".line") : null;
   if(lineEl) lineEl.classList.add("drop-target");
 });
 
-outputEl.addEventListener("dragleave", (e) => {
-  const lineEl = e.target.closest(".line");
-  if(lineEl) lineEl.classList.remove("drop-target");
-});
-
-outputEl.addEventListener("drop", (e) => {
+document.addEventListener("mouseup", (e) => {
   if(!dragInfo) return;
-  e.preventDefault();
   const info = dragInfo;
   dragInfo = null;
   document.querySelectorAll("#output .line.drop-target").forEach(el => el.classList.remove("drop-target"));
+  info.badgeEl.classList.remove("dragging");
+
+  if(!info.dragging){
+    // Plain click: toggle selection and open/close the nudge toolbar.
+    if(state.selected && state.selected.lineIndex === info.lineIndex && state.selected.chordId === info.chordId){
+      state.selected = null;
+    } else {
+      state.selected = {lineIndex: info.lineIndex, chordId: info.chordId};
+    }
+    renderOutput();
+    return;
+  }
+
+  // Was a drag: drop the chord at the pointer's current position, on
+  // whichever line it's over now (same line or a different one).
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const targetLineEl = el ? el.closest(".line") : null;
+  if(!targetLineEl){ renderOutput(); return; }
 
   syncStateFromOutputDom();
-
-  const targetLineEl = e.target.closest(".line");
-  if(!targetLineEl){ renderOutput(); return; }
   const targetLineIndex = parseInt(targetLineEl.dataset.lineIndex, 10);
   const sourceEntry = state.lines[info.lineIndex];
   const targetEntry = state.lines[targetLineIndex];
@@ -1065,12 +1090,6 @@ outputEl.addEventListener("drop", (e) => {
 
   state.selected = {lineIndex: targetLineIndex, chordId: chordObj.id};
   renderOutput();
-});
-
-outputEl.addEventListener("dragend", () => {
-  dragInfo = null;
-  document.querySelectorAll("#output .chord-badge.dragging").forEach(el => el.classList.remove("dragging"));
-  document.querySelectorAll("#output .line.drop-target").forEach(el => el.classList.remove("drop-target"));
 });
 
 copyBtn.addEventListener("click", async () => {
