@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>金刚经 · 描红练习</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%231c1712%22/%3E%3Cpath%20d%3D%22M32%2012%20L46%2026%20L32%2052%20L18%2026%20Z%22%20fill%3D%22none%22%20stroke%3D%22%23d9b98a%22%20stroke-width%3D%223%22%20stroke-linejoin%3D%22round%22/%3E%3Cpath%20d%3D%22M18%2026%20L46%2026%22%20stroke%3D%22%23d9b98a%22%20stroke-width%3D%222%22/%3E%3Cpath%20d%3D%22M25%2026%20L32%2012%20L39%2026%22%20fill%3D%22none%22%20stroke%3D%22%23d9b98a%22%20stroke-width%3D%222%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E">
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3/dist/hanzi-writer.min.js"></script>
+<style>
+  :root {
+    --gold: #b8935a;
+    --gold-light: #d9b98a;
+    --ink: #7a1f1f;
+    --paper: #faf6ee;
+    --paper-2: #f2ead8;
+    --accent: #8a2c2c;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: radial-gradient(ellipse at top, #3a2f28 0%, #1c1712 70%);
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Serif SC", "Songti SC", serif;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  #app {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+  }
+  #topbar {
+    flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: max(10px, env(safe-area-inset-top)) 14px 8px 16px;
+    color: var(--gold-light);
+    font-size: 13px;
+    letter-spacing: 1px;
+    gap: 10px;
+  }
+  #title {
+    font-size: 15px;
+    color: var(--gold-light);
+    opacity: 0.9;
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #clearbtn {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(217,185,138,0.14);
+    border: 1px solid rgba(217,185,138,0.4);
+    color: var(--gold-light);
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  #clearbtn:active { background: rgba(217,185,138,0.3); }
+  #progress-wrap {
+    flex: 0 0 auto;
+    padding: 0 16px 8px 16px;
+  }
+  #progress-track {
+    height: 3px; width: 100%;
+    background: rgba(217,185,138,0.15);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  #progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    transition: width 0.25s ease;
+  }
+  #stage {
+    flex: 1 1 auto;
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .page {
+    position: absolute; inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 16px;
+    opacity: 0;
+    transform: translateX(24px) scale(0.98);
+    transition: opacity 0.28s ease, transform 0.32s ease;
+    pointer-events: none;
+  }
+  .page.active {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    pointer-events: auto;
+  }
+  .card {
+    background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+    border-radius: 22px;
+    padding: 22px 16px;
+    width: 100%;
+    max-width: 680px;
+    max-height: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(184,147,90,0.25) inset;
+    position: relative;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--gold), var(--accent), var(--gold));
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding-top: 8px;
+  }
+  .cell-wrap {
+    position: relative;
+    flex: 0 0 auto;
+  }
+  .cell {
+    width: clamp(60px, 20vw, 104px);
+    height: clamp(60px, 20vw, 104px);
+    background: #fffdf8;
+    border: 1.5px solid var(--gold);
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    touch-action: none;
+    display: block;
+  }
+  .stroke-path {
+    fill: rgba(122,31,31,0.08);
+    stroke: #b9a179;
+    stroke-width: 1.5;
+    transition: fill 0.15s ease, stroke 0.15s ease;
+  }
+  .stroke-path.filled {
+    fill: #7a1f1f;
+    stroke: #5a1414;
+  }
+  .punct-cell {
+    width: clamp(30px, 8vw, 44px);
+    height: clamp(60px, 20vw, 104px);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    font-size: clamp(28px, 8vw, 42px);
+    color: var(--ink);
+    opacity: 0.5;
+    padding-bottom: 4px;
+    flex: 0 0 auto;
+  }
+  #bottombar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 8px 16px max(12px, env(safe-area-inset-bottom)) 16px;
+  }
+  .navbtn {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: rgba(217,185,138,0.14);
+    border: 1px solid rgba(217,185,138,0.35);
+    color: var(--gold-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .navbtn:active { background: rgba(217,185,138,0.3); }
+  .navbtn.disabled { opacity: 0.25; }
+  #pagelabel {
+    color: var(--gold-light);
+    font-size: 13px;
+    min-width: 70px;
+    text-align: center;
+    letter-spacing: 0.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  #offline-banner {
+    position: fixed;
+    left: 12px; right: 12px; top: max(12px, env(safe-area-inset-top));
+    background: #8a2c2c;
+    color: #f6e9d8;
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 50;
+    display: none;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  }
+</style>
+</head>
+<body>
+<div id="offline-banner">Couldn't load the character-tracing library. This app needs an internet connection (loads stroke data from a CDN).</div>
+<div id="app">
+  <div id="topbar">
+    <div id="title">金刚经 · 描红练习</div>
+    <div id="clearbtn">清空 CLEAR</div>
+  </div>
+  <div id="progress-wrap">
+    <div id="progress-track"><div id="progress-fill"></div></div>
+  </div>
+  <div id="stage">
+    <div id="pages"></div>
+  </div>
+  <div id="bottombar">
+    <div class="navbtn" id="prevbtn">‹</div>
+    <div id="pagelabel">1 / 1</div>
+    <div class="navbtn" id="nextbtn">›</div>
+  </div>
+</div>
+<script>
+window.TRACE_DATA=[[["如",true],["是",true],["我",true],["闻",true],["。",false]],[["一",true],["时",true],["，",false]],[["佛",true],["在",true],["舍",true],["卫",true],["国",true],["祇",true],["树",true],["给",true],["孤",true],["独",true],["园",true],["，",false]],[["与",true],["大",true],["比",true],["丘",true],["众",true],["千",true],["二",true],["百",true],["五",true],["十",true],["人",true],["俱",true],["。",false]],[["尔",true],["时",true],["世",true],["尊",true],["食",true],["时",true],["，",false]],[["着",true],["衣",true],["持",true],["钵",true],["，",false]],[["入",true],["舍",true],["卫",true],["大",true],["城",true],["乞",true],["食",true],["。",false]],[["于",true],["其",true],["城",true],["中",true],["次",true],["第",true],["乞",true],["已",true],["，",false]],[["还",true],["至",true],["本",true],["处",true],["。",false]],[["饭",true],["食",true],["讫",true],["，",false]],[["收",true],["衣",true],["钵",true],["，",false]],[["洗",true],["足",true],["已",true],["，",false]],[["敷",true],["座",true],["而",true],["坐",true],["。",false]],[["时",true],["长",true],["老",true],["须",true],["菩",true],["提",true],["在",true],["大",true],["众",true],["中",true],["，",false]],[["即",true],["从",true],["座",true],["起",true],["，",false]],[["偏",true],["袒",true],["右",true],["肩",true],["，",false]],[["右",true],["膝",true],["着",true],["地",true],["，",false]],[["合",true],["掌",true],["恭",true],["敬",true],["而",true],["白",true],["佛",true],["言",true],["：",false]],[["希",true],["有",true],["，",false]],[["世",true],["尊",true],["！",false]],[["如",true],["来",true],["善",true],["护",true],["念",true],["诸",true],["菩",true],["萨",true],["，",false]],[["善",true],["付",true],["嘱",true],["诸",true],["菩",true],["萨",true],["。",false]],[["世",true],["尊",true],["，",false]],[["善",true],["男",true],["子",true],["、",false],["善",true],["女",true],["人",true],["发",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["心",true],["，",false]],[["应",true],["云",true],["何",true],["住",true],["？",false]],[["云",true],["何",true],["降",true],["伏",true],["其",true],["心",true],["？",false]],[["佛",true],["言",true],["：",false]],[["善",true],["哉",true],["！",false]],[["善",true],["哉",true],["！",false]],[["须",true],["菩",true],["提",true],["，",false]],[["如",true],["汝",true],["所",true],["说",true],["，",false]],[["如",true],["来",true],["善",true],["护",true],["念",true],["诸",true],["菩",true],["萨",true],["，",false]],[["善",true],["付",true],["嘱",true],["诸",true],["菩",true],["萨",true],["。",false]],[["汝",true],["今",true],["谛",true],["听",true],["，",false]],[["当",true],["为",true],["汝",true],["说",true],["。",false]],[["善",true],["男",true],["子",true],["、",false],["善",true],["女",true],["人",true],["，",false]],[["发",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["心",true],["，",false]],[["应",true],["如",true],["是",true],["住",true],["，",false]],[["如",true],["是",true],["降",true],["伏",true],["其",true],["心",true],["。",false]],[["唯",true],["然",true],["，",false]],[["世",true],["尊",true],["。",false]],[["愿",true],["乐",true],["欲",true],["闻",true],["。",false]],[["佛",true],["告",true],["须",true],["菩",true],["提",true],["，",false]],[["诸",true],["菩",true],["萨",true],["摩",true],["诃",true],["萨",true],["应",true],["如",true],["是",true],["降",true],["伏",true],["其",true],["心",true],["：",false]],[["所",true],["有",true],["一",true],["切",true],["众",true],["生",true],["之",true],["类",true],["，",false]],[["若",true],["卵",true],["生",true],["、",false],["若",true],["胎",true],["生",true],["、",false],["若",true],["湿",true],["生",true],["、",false],["若",true],["化",true],["生",true],["，",false]],[["若",true],["有",true],["色",true],["、",false],["若",true],["无",true],["色",true],["，",false]],[["若",true],["有",true],["想",true],["、",false],["若",true],["无",true],["想",true],["，",false]],[["若",true],["非",true],["有",true],["想",true],["、",false],["非",true],["无",true],["想",true],["，",false]],[["我",true],["皆",true],["令",true],["入",true],["无",true],["余",true],["涅",true],["槃",true],["而",true],["灭",true],["度",true],["之",true],["。",false]],[["如",true],["是",true],["灭",true],["度",true],["无",true],["量",true],["、",false],["无",true],["数",true],["、",false],["无",true],["边",true],["众",true],["生",true],["，",false]],[["实",true],["无",true],["众",true],["生",true],["得",true],["灭",true],["度",true],["者",true],["，",false]],[["何",true],["以",true],["故",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["菩",true],["萨",true],["有",true],["我",true],["相",true],["、",false],["人",true],["相",true],["、",false],["众",true],["生",true],["相",true],["、",false],["寿",true],["者",true],["相",true],["，",false]],[["即",true],["非",true],["菩",true],["萨",true],["。",false]],[["复",true],["次",true],["，",false]],[["须",true],["菩",true],["提",true],["，",false]],[["菩",true],["萨",true],["于",true],["法",true],["，",false]],[["应",true],["无",true],["所",true],["住",true],["，",false]],[["行",true],["于",true],["布",true],["施",true],["。",false]],[["所",true],["谓",true],["不",true],["住",true],["色",true],["布",true],["施",true],["，",false]],[["不",true],["住",true],["声",true],["、",false],["香",true],["、",false],["味",true],["、",false],["触",true],["、",false],["法",true],["布",true],["施",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["菩",true],["萨",true],["应",true],["如",true],["是",true],["布",true],["施",true],["，",false]],[["不",true],["住",true],["于",true],["相",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["若",true],["菩",true],["萨",true],["不",true],["住",true],["相",true],["布",true],["施",true],["，",false]],[["其",true],["福",true],["德",true],["不",true],["可",true],["思",true],["量",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["东",true],["方",true],["虚",true],["空",true],["可",true],["思",true],["量",true],["不",true],["？",false]],[["不",true],["也",true],["，",false]],[["世",true],["尊",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["南",true],["西",true],["北",true],["方",true],["、",false],["四",true],["维",true],["上",true],["下",true],["虚",true],["空",true],["，",false]],[["可",true],["思",true],["量",true],["不",true],["？",false]],[["不",true],["也",true],["，",false]],[["世",true],["尊",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["菩",true],["萨",true],["无",true],["住",true],["相",true],["布",true],["施",true],["，",false]],[["福",true],["德",true],["亦",true],["复",true],["如",true],["是",true],["不",true],["可",true],["思",true],["量",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["菩",true],["萨",true],["但",true],["应",true],["如",true],["所",true],["教",true],["住",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["可",true],["以",true],["身",true],["相",true],["见",true],["如",true],["来",true],["不",true],["？",false]],[["不",true],["也",true],["，",false]],[["世",true],["尊",true],["。",false]],[["不",true],["可",true],["以",true],["身",true],["相",true],["得",true],["见",true],["如",true],["来",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["如",true],["来",true],["所",true],["说",true],["身",true],["相",true],["，",false]],[["即",true],["非",true],["身",true],["相",true],["。",false]],[["佛",true],["告",true],["须",true],["菩",true],["提",true],["：",false]],[["凡",true],["所",true],["有",true],["相",true],["，",false]],[["皆",true],["是",true],["虚",true],["妄",true],["。",false]],[["若",true],["见",true],["诸",true],["相",true],["非",true],["相",true],["，",false]],[["即",true],["见",true],["如",true],["来",true],["。",false]],[["须",true],["菩",true],["提",true],["白",true],["佛",true],["言",true],["：",false]],[["世",true],["尊",true],["，",false]],[["颇",true],["有",true],["众",true],["生",true],["，",false]],[["得",true],["闻",true],["如",true],["是",true],["言",true],["说",true],["章",true],["句",true],["，",false]],[["生",true],["实",true],["信",true],["不",true],["？",false]],[["佛",true],["告",true],["须",true],["菩",true],["提",true],["：",false]],[["莫",true],["作",true],["是",true],["说",true],["。",false]],[["如",true],["来",true],["灭",true],["后",true],["，",false]],[["后",true],["五",true],["百",true],["岁",true],["，",false]],[["有",true],["持",true],["戒",true],["修",true],["福",true],["者",true],["，",false]],[["于",true],["此",true],["章",true],["句",true],["，",false]],[["能",true],["生",true],["信",true],["心",true],["，",false]],[["以",true],["此",true],["为",true],["实",true],["，",false]],[["当",true],["知",true],["是",true],["人",true],["，",false]],[["不",true],["于",true],["一",true],["佛",true],["二",true],["佛",true],["三",true],["四",true],["五",true],["佛",true],["而",true],["种",true],["善",true],["根",true],["，",false]],[["已",true],["于",true],["无",true],["量",true],["千",true],["万",true],["佛",true],["所",true],["种",true],["诸",true],["善",true],["根",true],["。",false]],[["闻",true],["是",true],["章",true],["句",true],["，",false]],[["乃",true],["至",true],["一",true],["念",true],["生",true],["净",true],["信",true],["者",true],["，",false]],[["须",true],["菩",true],["提",true],["，",false]],[["如",true],["来",true],["悉",true],["知",true],["悉",true],["见",true],["，",false]],[["是",true],["诸",true],["众",true],["生",true],["，",false]],[["得",true],["如",true],["是",true],["无",true],["量",true],["福",true],["德",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["是",true],["诸",true],["众",true],["生",true],["，",false]],[["无",true],["复",true],["我",true],["相",true],["、",false],["人",true],["相",true],["、",false],["众",true],["生",true],["相",true],["、",false],["寿",true],["者",true],["相",true],["；",false]],[["无",true],["法",true],["相",true],["，",false]],[["亦",true],["无",true],["非",true],["法",true],["相",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["是",true],["诸",true],["众",true],["生",true],["，",false]],[["若",true],["心",true],["取",true],["相",true],["，",false]],[["即",true],["为",true],["着",true],["我",true],["、",false],["人",true],["、",false],["众",true],["生",true],["、",false],["寿",true],["者",true],["；",false]],[["若",true],["取",true],["法",true],["相",true],["，",false]],[["即",true],["着",true],["我",true],["、",false],["人",true],["、",false],["众",true],["生",true],["、",false],["寿",true],["者",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["若",true],["取",true],["非",true],["法",true],["相",true],["，",false]],[["即",true],["着",true],["我",true],["、",false],["人",true],["、",false],["众",true],["生",true],["、",false],["寿",true],["者",true],["。",false]],[["是",true],["故",true],["不",true],["应",true],["取",true],["法",true],["，",false]],[["不",true],["应",true],["取",true],["非",true],["法",true],["。",false]],[["以",true],["是",true],["义",true],["故",true],["，",false]],[["如",true],["来",true],["常",true],["说",true],["，",false]],[["汝",true],["等",true],["比",true],["丘",true],["，",false]],[["知",true],["我",true],["说",true],["法",true],["，",false]],[["如",true],["筏",true],["喻",true],["者",true],["，",false]],[["法",true],["尚",true],["应",true],["舍",true],["，",false]],[["何",true],["况",true],["非",true],["法",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["如",true],["来",true],["得",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["耶",true],["？",false]],[["如",true],["来",true],["有",true],["所",true],["说",true],["法",true],["耶",true],["？",false]],[["须",true],["菩",true],["提",true],["言",true],["：",false]],[["如",true],["我",true],["解",true],["佛",true],["所",true],["说",true],["义",true],["，",false]],[["无",true],["有",true],["定",true],["法",true],["名",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["，",false]],[["亦",true],["无",true],["有",true],["定",true],["法",true],["如",true],["来",true],["可",true],["说",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["如",true],["来",true],["所",true],["说",true],["法",true],["，",false]],[["皆",true],["不",true],["可",true],["取",true],["、",false],["不",true],["可",true],["说",true],["，",false]],[["非",true],["法",true],["、",false],["非",true],["非",true],["法",true],["。",false]],[["所",true],["以",true],["者",true],["何",true],["？",false]],[["一",true],["切",true],["贤",true],["圣",true],["，",false]],[["皆",true],["以",true],["无",true],["为",true],["法",true],["而",true],["有",true],["差",true],["别",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["若",true],["人",true],["满",true],["三",true],["千",true],["大",true],["千",true],["世",true],["界",true],["七",true],["宝",true],["，",false]],[["以",true],["用",true],["布",true],["施",true],["，",false]],[["是",true],["人",true],["所",true],["得",true],["福",true],["德",true],["，",false]],[["宁",true],["为",true],["多",true],["不",true],["？",false]],[["须",true],["菩",true],["提",true],["言",true],["：",false]],[["甚",true],["多",true],["，",false]],[["世",true],["尊",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["是",true],["福",true],["德",true],["，",false]],[["即",true],["非",true],["福",true],["德",true],["性",true],["，",false]],[["是",true],["故",true],["如",true],["来",true],["说",true],["福",true],["德",true],["多",true],["。",false]],[["若",true],["复",true],["有",true],["人",true],["，",false]],[["于",true],["此",true],["经",true],["中",true],["，",false]],[["受",true],["持",true],["乃",true],["至",true],["四",true],["句",true],["偈",true],["等",true],["，",false]],[["为",true],["他",true],["人",true],["说",true],["，",false]],[["其",true],["福",true],["胜",true],["彼",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["一",true],["切",true],["诸",true],["佛",true],["，",false]],[["及",true],["诸",true],["佛",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["法",true],["，",false]],[["皆",true],["从",true],["此",true],["经",true],["出",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["所",true],["谓",true],["佛",true],["法",true],["者",true],["，",false]],[["即",true],["非",true],["佛",true],["法",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["须",true],["陀",true],["洹",true],["能",true],["作",true],["是",true],["念",true],["，",false]],[["我",true],["得",true],["须",true],["陀",true],["洹",true],["果",true],["不",true],["？",false]],[["须",true],["菩",true],["提",true],["言",true],["：",false]],[["不",true],["也",true],["，",false]],[["世",true],["尊",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["须",true],["陀",true],["洹",true],["名",true],["为",true],["入",true],["流",true],["，",false]],[["而",true],["无",true],["所",true],["入",true],["。",false]],[["不",true],["入",true],["色",true],["、",false],["声",true],["、",false],["香",true],["、",false],["味",true],["、",false],["触",true],["、",false],["法",true],["，",false]],[["是",true],["名",true],["须",true],["陀",true],["洹",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["斯",true],["陀",true],["含",true],["能",true],["作",true],["是",true],["念",true],["。",false]],[["我",true],["得",true],["斯",true],["陀",true],["含",true],["果",true],["不",true],["？",false]],[["须",true],["菩",true],["提",true],["言",true],["：",false]],[["不",true],["也",true],["，",false]],[["世",true],["尊",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["斯",true],["陀",true],["含",true],["名",true],["一",true],["往",true],["来",true],["，",false]],[["而",true],["实",true],["无",true],["往",true],["来",true],["，",false]],[["是",true],["名",true],["斯",true],["陀",true],["含",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["阿",true],["那",true],["含",true],["能",true],["作",true],["是",true],["念",true],["，",false]],[["我",true],["得",true],["阿",true],["那",true],["含",true],["果",true],["不",true],["？",false]],[["须",true],["菩",true],["提",true],["言",true],["：",false]],[["不",true],["也",true],["，",false]],[["世",true],["尊",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["阿",true],["那",true],["含",true],["名",true],["为",true],["不",true],["来",true],["，",false]],[["而",true],["实",true],["无",true],["不",true],["来",true],["，",false]],[["是",true],["故",true],["名",true],["阿",true],["那",true],["含",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["阿",true],["罗",true],["汉",true],["能",true],["作",true],["是",true],["念",true],["，",false]],[["我",true],["得",true],["阿",true],["罗",true],["汉",true],["道",true],["不",true],["？",false]],[["须",true],["菩",true],["提",true],["言",true],["：",false]],[["不",true],["也",true],["，",false]],[["世",true],["尊",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["实",true],["无",true],["有",true],["法",true],["名",true],["阿",true],["罗",true],["汉",true],["。",false]],[["世",true],["尊",true],["，",false]],[["若",true],["阿",true],["罗",true],["汉",true],["作",true],["是",true],["念",true],["，",false]],[["我",true],["得",true],["阿",true],["罗",true],["汉",true],["道",true],["，",false]],[["即",true],["为",true],["着",true],["我",true],["、",false],["人",true],["、",false],["众",true],["生",true],["、",false],["寿",true],["者",true],["。",false]],[["世",true],["尊",true],["，",false]],[["佛",true],["说",true],["我",true],["得",true],["无",true],["诤",true],["三",true],["昧",true],["，",false]],[["人",true],["中",true],["最",true],["为",true],["第",true],["一",true],["，",false]],[["是",true],["第",true],["一",true],["离",true],["欲",true],["阿",true],["罗",true],["汉",true],["。",false]],[["世",true],["尊",true],["，",false]],[["我",true],["不",true],["作",true],["是",true],["念",true],["，",false]],[["我",true],["是",true],["离",true],["欲",true],["阿",true],["罗",true],["汉",true],["。",false]],[["世",true],["尊",true],["，",false]],[["我",true],["若",true],["作",true],["是",true],["念",true],["，",false]],[["我",true],["得",true],["阿",true],["罗",true],["汉",true],["道",true],["，",false]],[["世",true],["尊",true],["则",true],["不",true],["说",true],["须",true],["菩",true],["提",true],["是",true],["乐",true],["阿",true],["兰",true],["那",true],["行",true],["者",true],["。",false]],[["以",true],["须",true],["菩",true],["提",true],["实",true],["无",true],["所",true],["行",true],["，",false]],[["而",true],["名",true],["须",true],["菩",true],["提",true],["是",true],["乐",true],["阿",true],["兰",true],["那",true],["行",true],["。",false]],[["佛",true],["告",true],["须",true],["菩",true],["提",true],["：",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["如",true],["来",true],["昔",true],["在",true],["然",true],["灯",true],["佛",true],["所",true],["，",false]],[["于",true],["法",true],["有",true],["所",true],["得",true],["不",true],["？",false]],[["不",true],["也",true],["，",false]],[["世",true],["尊",true],["。",false]],[["如",true],["来",true],["在",true],["然",true],["灯",true],["佛",true],["所",true],["，",false]],[["于",true],["法",true],["实",true],["无",true],["所",true],["得",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["菩",true],["萨",true],["庄",true],["严",true],["佛",true],["土",true],["不",true],["？",false]],[["不",true],["也",true],["，",false]],[["世",true],["尊",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["庄",true],["严",true],["佛",true],["土",true],["者",true],["，",false]],[["即",true],["非",true],["庄",true],["严",true],["，",false]],[["是",true],["名",true],["庄",true],["严",true],["。",false]],[["是",true],["故",true],["，",false]],[["须",true],["菩",true],["提",true],["，",false]],[["诸",true],["菩",true],["萨",true],["摩",true],["诃",true],["萨",true],["，",false]],[["应",true],["如",true],["是",true],["生",true],["清",true],["净",true],["心",true],["。",false]],[["不",true],["应",true],["住",true],["色",true],["生",true],["心",true],["，",false]],[["不",true],["应",true],["住",true],["声",true],["、",false],["香",true],["、",false],["味",true],["、",false],["触",true],["、",false],["法",true],["生",true],["心",true],["，",false]],[["应",true],["无",true],["所",true],["住",true],["而",true],["生",true],["其",true],["心",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["譬",true],["如",true],["有",true],["人",true],["，",false]],[["身",true],["如",true],["须",true],["弥",true],["山",true],["王",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["是",true],["身",true],["为",true],["大",true],["不",true],["？",false]],[["须",true],["菩",true],["提",true],["言",true],["：",false]],[["甚",true],["大",true],["，",false]],[["世",true],["尊",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["佛",true],["说",true],["非",true],["身",true],["，",false]],[["是",true],["名",true],["大",true],["身",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["如",true],["恒",true],["河",true],["中",true],["所",true],["有",true],["沙",true],["数",true],["，",false]],[["如",true],["是",true],["沙",true],["等",true],["恒",true],["河",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["是",true],["诸",true],["恒",true],["河",true],["沙",true],["，",false]],[["宁",true],["为",true],["多",true],["不",true],["？",false]],[["须",true],["菩",true],["提",true],["言",true],["：",false]],[["甚",true],["多",true],["，",false]],[["世",true],["尊",true],["。",false]],[["但",true],["诸",true],["恒",true],["河",true],["尚",true],["多",true],["无",true],["数",true],["，",false]],[["何",true],["况",true],["其",true],["沙",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["我",true],["今",true],["实",true],["言",true],["告",true],["汝",true],["：",false]],[["若",true],["有",true],["善",true],["男",true],["子",true],["、",false],["善",true],["女",true],["人",true],["，",false]],[["以",true],["七",true],["宝",true],["满",true],["尔",true],["所",true],["恒",true],["河",true],["沙",true],["数",true],["三",true],["千",true],["大",true],["千",true],["世",true],["界",true],["，",false]],[["以",true],["用",true],["布",true],["施",true],["，",false]],[["得",true],["福",true],["多",true],["不",true],["？",false]],[["须",true],["菩",true],["提",true],["言",true],["：",false]],[["甚",true],["多",true],["，",false]],[["世",true],["尊",true],["。",false]],[["佛",true],["告",true],["须",true],["菩",true],["提",true],["：",false]],[["若",true],["善",true],["男",true],["子",true],["、",false],["善",true],["女",true],["人",true],["，",false]],[["于",true],["此",true],["经",true],["中",true],["，",false]],[["乃",true],["至",true],["受",true],["持",true],["四",true],["句",true],["偈",true],["等",true],["，",false]],[["为",true],["他",true],["人",true],["说",true],["，",false]],[["而",true],["此",true],["福",true],["德",true],["，",false]],[["胜",true],["前",true],["福",true],["德",true],["。",false]],[["复",true],["次",true],["，",false]],[["须",true],["菩",true],["提",true],["，",false]],[["随",true],["说",true],["是",true],["经",true],["，",false]],[["乃",true],["至",true],["四",true],["句",true],["偈",true],["等",true],["，",false]],[["当",true],["知",true],["此",true],["处",true],["，",false]],[["一",true],["切",true],["世",true],["间",true],["天",true],["、",false],["人",true],["、",false],["阿",true],["修",true],["罗",true],["，",false]],[["皆",true],["应",true],["供",true],["养",true],["，",false]],[["如",true],["佛",true],["塔",true],["庙",true],["。",false]],[["何",true],["况",true],["有",true],["人",true],["，",false]],[["尽",true],["能",true],["受",true],["持",true],["读",true],["诵",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["当",true],["知",true],["是",true],["人",true],["，",false]],[["成",true],["就",true],["最",true],["上",true],["第",true],["一",true],["希",true],["有",true],["之",true],["法",true],["。",false]],[["若",true],["是",true],["经",true],["典",true],["所",true],["在",true],["之",true],["处",true],["，",false]],[["即",true],["为",true],["有",true],["佛",true],["，",false]],[["若",true],["尊",true],["重",true],["弟",true],["子",true],["。",false]],[["尔",true],["时",true],["，",false]],[["须",true],["菩",true],["提",true],["白",true],["佛",true],["言",true],["：",false]],[["世",true],["尊",true],["，",false]],[["当",true],["何",true],["名",true],["此",true],["经",true],["？",false]],[["我",true],["等",true],["云",true],["何",true],["奉",true],["持",true],["？",false]],[["佛",true],["告",true],["须",true],["菩",true],["提",true],["：",false]],[["是",true],["经",true],["名",true],["为",true],["金",true],["刚",true],["般",true],["若",true],["波",true],["罗",true],["蜜",true],["，",false]],[["以",true],["是",true],["名",true],["字",true],["，",false]],[["汝",true],["当",true],["奉",true],["持",true],["。",false]],[["所",true],["以",true],["者",true],["何",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["佛",true],["说",true],["般",true],["若",true],["波",true],["罗",true],["蜜",true],["，",false]],[["即",true],["非",true],["般",true],["若",true],["波",true],["罗",true],["蜜",true],["，",false]],[["是",true],["名",true],["般",true],["若",true],["波",true],["罗",true],["蜜",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["如",true],["来",true],["有",true],["所",true],["说",true],["法",true],["不",true],["？",false]],[["须",true],["菩",true],["提",true],["白",true],["佛",true],["言",true],["：",false]],[["世",true],["尊",true],["，",false]],[["如",true],["来",true],["无",true],["所",true],["说",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["三",true],["千",true],["大",true],["千",true],["世",true],["界",true],["所",true],["有",true],["微",true],["尘",true],["，",false]],[["是",true],["为",true],["多",true],["不",true],["？",false]],[["须",true],["菩",true],["提",true],["言",true],["：",false]],[["甚",true],["多",true],["，",false]],[["世",true],["尊",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["诸",true],["微",true],["尘",true],["，",false]],[["如",true],["来",true],["说",true],["非",true],["微",true],["尘",true],["，",false]],[["是",true],["名",true],["微",true],["尘",true],["。",false]],[["如",true],["来",true],["说",true],["世",true],["界",true],["，",false]],[["非",true],["世",true],["界",true],["，",false]],[["是",true],["名",true],["世",true],["界",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["可",true],["以",true],["三",true],["十",true],["二",true],["相",true],["见",true],["如",true],["来",true],["不",true],["？",false]],[["不",true],["也",true],["，",false]],[["世",true],["尊",true],["。",false]],[["不",true],["可",true],["以",true],["三",true],["十",true],["二",true],["相",true],["得",true],["见",true],["如",true],["来",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["如",true],["来",true],["说",true],["三",true],["十",true],["二",true],["相",true],["，",false]],[["即",true],["是",true],["非",true],["相",true],["，",false]],[["是",true],["名",true],["三",true],["十",true],["二",true],["相",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["有",true],["善",true],["男",true],["子",true],["、",false],["善",true],["女",true],["人",true],["，",false]],[["以",true],["恒",true],["河",true],["沙",true],["等",true],["身",true],["命",true],["布",true],["施",true],["，",false]],[["若",true],["复",true],["有",true],["人",true],["，",false]],[["于",true],["此",true],["经",true],["中",true],["乃",true],["至",true],["受",true],["持",true],["四",true],["句",true],["偈",true],["等",true],["，",false]],[["为",true],["他",true],["人",true],["说",true],["，",false]],[["其",true],["福",true],["甚",true],["多",true],["。",false]],[["尔",true],["时",true],["，",false]],[["须",true],["菩",true],["提",true],["闻",true],["说",true],["是",true],["经",true],["，",false]],[["深",true],["解",true],["义",true],["趣",true],["，",false]],[["涕",true],["泪",true],["悲",true],["泣",true],["，",false]],[["而",true],["白",true],["佛",true],["言",true],["：",false]],[["希",true],["有",true],["，",false]],[["世",true],["尊",true],["！",false]],[["佛",true],["说",true],["如",true],["是",true],["甚",true],["深",true],["经",true],["典",true],["，",false]],[["我",true],["从",true],["昔",true],["来",true],["所",true],["得",true],["慧",true],["眼",true],["，",false]],[["未",true],["曾",true],["得",true],["闻",true],["如",true],["是",true],["之",true],["经",true],["。",false]],[["世",true],["尊",true],["，",false]],[["若",true],["复",true],["有",true],["人",true],["得",true],["闻",true],["是",true],["经",true],["，",false]],[["信",true],["心",true],["清",true],["净",true],["，",false]],[["即",true],["生",true],["实",true],["相",true],["。",false]],[["当",true],["知",true],["是",true],["人",true],["，",false]],[["成",true],["就",true],["第",true],["一",true],["希",true],["有",true],["功",true],["德",true],["。",false]],[["世",true],["尊",true],["，",false]],[["是",true],["实",true],["相",true],["者",true],["，",false]],[["即",true],["是",true],["非",true],["相",true],["，",false]],[["是",true],["故",true],["如",true],["来",true],["说",true],["名",true],["实",true],["相",true],["。",false]],[["世",true],["尊",true],["，",false]],[["我",true],["今",true],["得",true],["闻",true],["如",true],["是",true],["经",true],["典",true],["，",false]],[["信",true],["解",true],["受",true],["持",true],["，",false]],[["不",true],["足",true],["为",true],["难",true],["。",false]],[["若",true],["当",true],["来",true],["世",true],["，",false]],[["后",true],["五",true],["百",true],["岁",true],["，",false]],[["其",true],["有",true],["众",true],["生",true],["，",false]],[["得",true],["闻",true],["是",true],["经",true],["，",false]],[["信",true],["解",true],["受",true],["持",true],["，",false]],[["是",true],["人",true],["即",true],["为",true],["第",true],["一",true],["希",true],["有",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["此",true],["人",true],["无",true],["我",true],["相",true],["、",false],["无",true],["人",true],["相",true],["、",false],["无",true],["众",true],["生",true],["相",true],["、",false],["无",true],["寿",true],["者",true],["相",true],["。",false]],[["所",true],["以",true],["者",true],["何",true],["？",false]],[["我",true],["相",true],["，",false]],[["即",true],["是",true],["非",true],["相",true],["；",false]],[["人",true],["相",true],["、",false],["众",true],["生",true],["相",true],["、",false],["寿",true],["者",true],["相",true],["，",false]],[["即",true],["是",true],["非",true],["相",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["离",true],["一",true],["切",true],["诸",true],["相",true],["，",false]],[["即",true],["名",true],["诸",true],["佛",true],["。",false]],[["佛",true],["告",true],["须",true],["菩",true],["提",true],["：",false]],[["如",true],["是",true],["！",false]],[["如",true],["是",true],["！",false]],[["若",true],["复",true],["有",true],["人",true],["，",false]],[["得",true],["闻",true],["是",true],["经",true],["，",false]],[["不",true],["惊",true],["不",true],["怖",true],["不",true],["畏",true],["，",false]],[["当",true],["知",true],["是",true],["人",true],["甚",true],["为",true],["希",true],["有",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["如",true],["来",true],["说",true],["第",true],["一",true],["波",true],["罗",true],["蜜",true],["，",false]],[["即",true],["非",true],["第",true],["一",true],["波",true],["罗",true],["蜜",true],["，",false]],[["是",true],["名",true],["第",true],["一",true],["波",true],["罗",true],["蜜",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["忍",true],["辱",true],["波",true],["罗",true],["蜜",true],["，",false]],[["如",true],["来",true],["说",true],["非",true],["忍",true],["辱",true],["波",true],["罗",true],["蜜",true],["，",false]],[["是",true],["名",true],["忍",true],["辱",true],["波",true],["罗",true],["蜜",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["如",true],["我",true],["昔",true],["为",true],["歌",true],["利",true],["王",true],["割",true],["截",true],["身",true],["体",true],["，",false]],[["我",true],["于",true],["尔",true],["时",true],["，",false]],[["无",true],["我",true],["相",true],["、",false],["无",true],["人",true],["相",true],["、",false],["无",true],["众",true],["生",true],["相",true],["、",false],["无",true],["寿",true],["者",true],["相",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["我",true],["于",true],["往",true],["昔",true],["节",true],["节",true],["支",true],["解",true],["时",true],["，",false]],[["若",true],["有",true],["我",true],["相",true],["、",false],["人",true],["相",true],["、",false],["众",true],["生",true],["相",true],["、",false],["寿",true],["者",true],["相",true],["，",false]],[["应",true],["生",true],["嗔",true],["恨",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["又",true],["念",true],["过",true],["去",true],["于",true],["五",true],["百",true],["世",true],["作",true],["忍",true],["辱",true],["仙",true],["人",true],["，",false]],[["于",true],["尔",true],["所",true],["世",true],["，",false]],[["无",true],["我",true],["相",true],["、",false],["无",true],["人",true],["相",true],["、",false],["无",true],["众",true],["生",true],["相",true],["、",false],["无",true],["寿",true],["者",true],["相",true],["。",false]],[["是",true],["故",true],["，",false]],[["须",true],["菩",true],["提",true],["，",false]],[["菩",true],["萨",true],["应",true],["离",true],["一",true],["切",true],["相",true],["，",false]],[["发",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["心",true],["，",false]],[["不",true],["应",true],["住",true],["色",true],["生",true],["心",true],["，",false]],[["不",true],["应",true],["住",true],["声",true],["、",false],["香",true],["、",false],["味",true],["、",false],["触",true],["、",false],["法",true],["生",true],["心",true],["，",false]],[["应",true],["生",true],["无",true],["所",true],["住",true],["心",true],["。",false]],[["若",true],["心",true],["有",true],["住",true],["，",false]],[["即",true],["为",true],["非",true],["住",true],["。",false]],[["是",true],["故",true],["，",false]],[["佛",true],["说",true],["菩",true],["萨",true],["心",true],["不",true],["应",true],["住",true],["色",true],["布",true],["施",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["菩",true],["萨",true],["为",true],["利",true],["益",true],["一",true],["切",true],["众",true],["生",true],["故",true],["，",false]],[["应",true],["如",true],["是",true],["布",true],["施",true],["。",false]],[["如",true],["来",true],["说",true],["一",true],["切",true],["诸",true],["相",true],["即",true],["是",true],["非",true],["相",true],["，",false]],[["又",true],["说",true],["一",true],["切",true],["众",true],["生",true],["即",true],["非",true],["众",true],["生",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["如",true],["来",true],["是",true],["真",true],["语",true],["者",true],["、",false],["实",true],["语",true],["者",true],["、",false],["如",true],["语",true],["者",true],["、",false],["不",true],["诳",true],["语",true],["者",true],["、",false],["不",true],["异",true],["语",true],["者",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["如",true],["来",true],["所",true],["得",true],["法",true],["，",false]],[["此",true],["法",true],["无",true],["实",true],["无",true],["虚",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["菩",true],["萨",true],["心",true],["住",true],["于",true],["法",true],["而",true],["行",true],["布",true],["施",true],["，",false]],[["如",true],["人",true],["入",true],["暗",true],["，",false]],[["即",true],["无",true],["所",true],["见",true],["。",false]],[["若",true],["菩",true],["萨",true],["心",true],["不",true],["住",true],["法",true],["而",true],["行",true],["布",true],["施",true],["，",false]],[["如",true],["人",true],["有",true],["目",true],["，",false]],[["日",true],["光",true],["明",true],["照",true],["，",false]],[["见",true],["种",true],["种",true],["色",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["当",true],["来",true],["之",true],["世",true],["，",false]],[["若",true],["有",true],["善",true],["男",true],["子",true],["、",false],["善",true],["女",true],["人",true],["，",false]],[["能",true],["于",true],["此",true],["经",true],["受",true],["持",true],["读",true],["诵",true],["，",false]],[["即",true],["为",true],["如",true],["来",true],["以",true],["佛",true],["智",true],["慧",true],["，",false]],[["悉",true],["知",true],["是",true],["人",true],["，",false]],[["悉",true],["见",true],["是",true],["人",true],["，",false]],[["皆",true],["得",true],["成",true],["就",true],["无",true],["量",true],["无",true],["边",true],["功",true],["德",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["有",true],["善",true],["男",true],["子",true],["、",false],["善",true],["女",true],["人",true],["，",false]],[["初",true],["日",true],["分",true],["以",true],["恒",true],["河",true],["沙",true],["等",true],["身",true],["布",true],["施",true],["，",false]],[["中",true],["日",true],["分",true],["复",true],["以",true],["恒",true],["河",true],["沙",true],["等",true],["身",true],["布",true],["施",true],["，",false]],[["后",true],["日",true],["分",true],["亦",true],["以",true],["恒",true],["河",true],["沙",true],["等",true],["身",true],["布",true],["施",true],["，",false]],[["如",true],["是",true],["无",true],["量",true],["百",true],["千",true],["万",true],["亿",true],["劫",true],["，",false]],[["以",true],["身",true],["布",true],["施",true],["。",false]],[["若",true],["复",true],["有",true],["人",true],["，",false]],[["闻",true],["此",true],["经",true],["典",true],["，",false]],[["信",true],["心",true],["不",true],["逆",true],["，",false]],[["其",true],["福",true],["胜",true],["彼",true],["。",false]],[["何",true],["况",true],["书",true],["写",true],["、",false],["受",true],["持",true],["读",true],["诵",true],["、",false],["为",true],["人",true],["解",true],["说",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["以",true],["要",true],["言",true],["之",true],["，",false]],[["是",true],["经",true],["有",true],["不",true],["可",true],["思",true],["议",true],["、",false],["不",true],["可",true],["称",true],["量",true],["、",false],["无",true],["边",true],["功",true],["德",true],["。",false]],[["如",true],["来",true],["为",true],["发",true],["大",true],["乘",true],["者",true],["说",true],["，",false]],[["为",true],["发",true],["最",true],["上",true],["乘",true],["者",true],["说",true],["。",false]],[["若",true],["有",true],["人",true],["能",true],["受",true],["持",true],["读",true],["诵",true],["，",false]],[["广",true],["为",true],["人",true],["说",true],["。",false]],[["如",true],["来",true],["悉",true],["知",true],["是",true],["人",true],["，",false]],[["悉",true],["见",true],["是",true],["人",true],["，",false]],[["皆",true],["得",true],["成",true],["就",true],["不",true],["可",true],["量",true],["、",false],["不",true],["可",true],["称",true],["、",false],["无",true],["有",true],["边",true],["、",false],["不",true],["可",true],["思",true],["议",true],["功",true],["德",true],["。",false]],[["如",true],["是",true],["人",true],["等",true],["，",false]],[["即",true],["为",true],["荷",true],["担",true],["如",true],["来",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["乐",true],["小",true],["法",true],["者",true],["，",false]],[["着",true],["我",true],["见",true],["、",false],["人",true],["见",true],["、",false],["众",true],["生",true],["见",true],["、",false],["寿",true],["者",true],["见",true],["，",false]],[["即",true],["于",true],["此",true],["经",true],["不",true],["能",true],["听",true],["受",true],["读",true],["诵",true],["，",false]],[["为",true],["人",true],["解",true],["说",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["在",true],["在",true],["处",true],["处",true],["，",false]],[["若",true],["有",true],["此",true],["经",true],["，",false]],[["一",true],["切",true],["世",true],["间",true],["天",true],["、",false],["人",true],["、",false],["阿",true],["修",true],["罗",true],["所",true],["应",true],["供",true],["养",true],["。",false]],[["当",true],["知",true],["此",true],["处",true],["，",false]],[["即",true],["为",true],["是",true],["塔",true],["，",false]],[["皆",true],["应",true],["恭",true],["敬",true],["，",false]],[["作",true],["礼",true],["围",true],["绕",true],["，",false]],[["以",true],["诸",true],["华",true],["香",true],["而",true],["散",true],["其",true],["处",true],["。",false]],[["复",true],["次",true],["，",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["善",true],["男",true],["子",true],["、",false],["善",true],["女",true],["人",true],["，",false]],[["受",true],["持",true],["读",true],["诵",true],["此",true],["经",true],["，",false]],[["若",true],["为",true],["人",true],["轻",true],["贱",true],["，",false]],[["是",true],["人",true],["先",true],["世",true],["罪",true],["业",true],["，",false]],[["应",true],["堕",true],["恶",true],["道",true],["，",false]],[["以",true],["今",true],["世",true],["人",true],["轻",true],["贱",true],["故",true],["，",false]],[["先",true],["世",true],["罪",true],["业",true],["即",true],["为",true],["消",true],["灭",true],["，",false]],[["当",true],["得",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["我",true],["念",true],["过",true],["去",true],["无",true],["量",true],["阿",true],["僧",true],["祇",true],["劫",true],["，",false]],[["于",true],["然",true],["灯",true],["佛",true],["前",true],["，",false]],[["得",true],["值",true],["八",true],["百",true],["四",true],["千",true],["万",true],["亿",true],["那",true],["由",true],["他",true],["诸",true],["佛",true],["，",false]],[["悉",true],["皆",true],["供",true],["养",true],["承",true],["事",true],["，",false]],[["无",true],["空",true],["过",true],["者",true],["。",false]],[["若",true],["复",true],["有",true],["人",true],["，",false]],[["于",true],["后",true],["末",true],["世",true],["，",false]],[["能",true],["受",true],["持",true],["读",true],["诵",true],["此",true],["经",true],["，",false]],[["所",true],["得",true],["功",true],["德",true],["，",false]],[["于",true],["我",true],["所",true],["供",true],["养",true],["诸",true],["佛",true],["功",true],["德",true],["，",false]],[["百",true],["分",true],["不",true],["及",true],["一",true],["，",false]],[["千",true],["万",true],["亿",true],["分",true],["，",false]],[["乃",true],["至",true],["算",true],["数",true],["譬",true],["喻",true],["所",true],["不",true],["能",true],["及",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["善",true],["男",true],["子",true],["、",false],["善",true],["女",true],["人",true],["，",false]],[["于",true],["后",true],["末",true],["世",true],["，",false]],[["有",true],["受",true],["持",true],["读",true],["诵",true],["此",true],["经",true],["，",false]],[["所",true],["得",true],["功",true],["德",true],["，",false]],[["我",true],["若",true],["具",true],["说",true],["者",true],["，",false]],[["或",true],["有",true],["人",true],["闻",true],["，",false]],[["心",true],["即",true],["狂",true],["乱",true],["，",false]],[["狐",true],["疑",true],["不",true],["信",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["当",true],["知",true],["是",true],["经",true],["义",true],["不",true],["可",true],["思",true],["议",true],["，",false]],[["果",true],["报",true],["亦",true],["不",true],["可",true],["思",true],["议",true],["。",false]],[["尔",true],["时",true],["，",false]],[["须",true],["菩",true],["提",true],["白",true],["佛",true],["言",true],["：",false]],[["世",true],["尊",true],["，",false]],[["善",true],["男",true],["子",true],["、",false],["善",true],["女",true],["人",true],["，",false]],[["发",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["心",true],["，",false]],[["云",true],["何",true],["应",true],["住",true],["？",false]],[["云",true],["何",true],["降",true],["伏",true],["其",true],["心",true],["？",false]],[["佛",true],["告",true],["须",true],["菩",true],["提",true],["：",false]],[["善",true],["男",true],["子",true],["、",false],["善",true],["女",true],["人",true],["，",false]],[["发",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["心",true],["者",true],["，",false]],[["当",true],["生",true],["如",true],["是",true],["心",true],["，",false]],[["我",true],["应",true],["灭",true],["度",true],["一",true],["切",true],["众",true],["生",true],["，",false]],[["灭",true],["度",true],["一",true],["切",true],["众",true],["生",true],["已",true],["，",false]],[["而",true],["无",true],["有",true],["一",true],["众",true],["生",true],["实",true],["灭",true],["度",true],["者",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["菩",true],["萨",true],["有",true],["我",true],["相",true],["、",false],["人",true],["相",true],["、",false],["众",true],["生",true],["相",true],["、",false],["寿",true],["者",true],["相",true],["，",false]],[["即",true],["非",true],["菩",true],["萨",true],["。",false]],[["所",true],["以",true],["者",true],["何",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["实",true],["无",true],["有",true],["法",true],["，",false]],[["发",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["心",true],["者",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["如",true],["来",true],["于",true],["然",true],["灯",true],["佛",true],["所",true],["，",false]],[["有",true],["法",true],["得",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["不",true],["？",false]],[["不",true],["也",true],["，",false]],[["世",true],["尊",true],["。",false]],[["如",true],["我",true],["解",true],["佛",true],["所",true],["说",true],["义",true],["，",false]],[["佛",true],["于",true],["然",true],["灯",true],["佛",true],["所",true],["，",false]],[["无",true],["有",true],["法",true],["得",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["。",false]],[["佛",true],["言",true],["：",false]],[["如",true],["是",true],["，",false]],[["如",true],["是",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["实",true],["无",true],["有",true],["法",true],["，",false]],[["如",true],["来",true],["得",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["有",true],["法",true],["如",true],["来",true],["得",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["者",true],["，",false]],[["然",true],["灯",true],["佛",true],["即",true],["不",true],["与",true],["我",true],["授",true],["记",true],["：",false]],[["汝",true],["于",true],["来",true],["世",true],["，",false]],[["当",true],["得",true],["作",true],["佛",true],["，",false]],[["号",true],["释",true],["迦",true],["牟",true],["尼",true],["。",false]],[["以",true],["实",true],["无",true],["有",true],["法",true],["，",false]],[["得",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["，",false]],[["是",true],["故",true],["，",false]],[["然",true],["灯",true],["佛",true],["与",true],["我",true],["授",true],["记",true],["，",false]],[["作",true],["是",true],["言",true],["：",false]],[["汝",true],["于",true],["来",true],["世",true],["，",false]],[["当",true],["得",true],["作",true],["佛",true],["，",false]],[["号",true],["释",true],["迦",true],["牟",true],["尼",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["如",true],["来",true],["者",true],["，",false]],[["即",true],["诸",true],["法",true],["如",true],["义",true],["。",false]],[["若",true],["有",true],["人",true],["言",true],["，",false]],[["如",true],["来",true],["得",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["实",true],["无",true],["有",true],["法",true],["，",false]],[["佛",true],["得",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["如",true],["来",true],["所",true],["得",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["，",false]],[["于",true],["是",true],["中",true],["无",true],["实",true],["无",true],["虚",true],["。",false]],[["是",true],["故",true],["，",false]],[["如",true],["来",true],["说",true],["一",true],["切",true],["法",true],["皆",true],["是",true],["佛",true],["法",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["所",true],["言",true],["一",true],["切",true],["法",true],["者",true],["，",false]],[["即",true],["非",true],["一",true],["切",true],["法",true],["，",false]],[["是",true],["故",true],["名",true],["一",true],["切",true],["法",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["譬",true],["如",true],["人",true],["身",true],["长",true],["大",true],["。",false]],[["须",true],["菩",true],["提",true],["言",true],["：",false]],[["世",true],["尊",true],["，",false]],[["如",true],["来",true],["说",true],["人",true],["身",true],["长",true],["大",true],["，",false]],[["即",true],["为",true],["非",true],["大",true],["身",true],["，",false]],[["是",true],["名",true],["大",true],["身",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["菩",true],["萨",true],["亦",true],["如",true],["是",true],["。",false]],[["若",true],["作",true],["是",true],["言",true],["，",false]],[["我",true],["当",true],["灭",true],["度",true],["无",true],["量",true],["众",true],["生",true],["，",false]],[["即",true],["不",true],["名",true],["菩",true],["萨",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["实",true],["无",true],["有",true],["法",true],["名",true],["为",true],["菩",true],["萨",true],["。",false]],[["是",true],["故",true],["，",false]],[["佛",true],["说",true],["一",true],["切",true],["法",true],["无",true],["我",true],["、",false],["无",true],["人",true],["、",false],["无",true],["众",true],["生",true],["、",false],["无",true],["寿",true],["者",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["菩",true],["萨",true],["作",true],["是",true],["言",true],["，",false]],[["我",true],["当",true],["庄",true],["严",true],["佛",true],["土",true],["，",false]],[["是",true],["不",true],["名",true],["菩",true],["萨",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["如",true],["来",true],["说",true],["庄",true],["严",true],["佛",true],["土",true],["者",true],["，",false]],[["即",true],["非",true],["庄",true],["严",true],["，",false]],[["是",true],["名",true],["庄",true],["严",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["菩",true],["萨",true],["通",true],["达",true],["无",true],["我",true],["法",true],["者",true],["，",false]],[["如",true],["来",true],["说",true],["名",true],["真",true],["是",true],["菩",true],["萨",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["如",true],["来",true],["有",true],["肉",true],["眼",true],["不",true],["？",false]],[["如",true],["是",true],["，",false]],[["世",true],["尊",true],["，",false]],[["如",true],["来",true],["有",true],["肉",true],["眼",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["如",true],["来",true],["有",true],["天",true],["眼",true],["不",true],["？",false]],[["如",true],["是",true],["，",false]],[["世",true],["尊",true],["，",false]],[["如",true],["来",true],["有",true],["天",true],["眼",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["如",true],["来",true],["有",true],["慧",true],["眼",true],["不",true],["？",false]],[["如",true],["是",true],["，",false]],[["世",true],["尊",true],["，",false]],[["如",true],["来",true],["有",true],["慧",true],["眼",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["如",true],["来",true],["有",true],["法",true],["眼",true],["不",true],["？",false]],[["如",true],["是",true],["，",false]],[["世",true],["尊",true],["，",false]],[["如",true],["来",true],["有",true],["法",true],["眼",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["如",true],["来",true],["有",true],["佛",true],["眼",true],["不",true],["？",false]],[["如",true],["是",true],["，",false]],[["世",true],["尊",true],["，",false]],[["如",true],["来",true],["有",true],["佛",true],["眼",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["如",true],["恒",true],["河",true],["中",true],["所",true],["有",true],["沙",true],["，",false]],[["佛",true],["说",true],["是",true],["沙",true],["不",true],["？",false]],[["如",true],["是",true],["，",false]],[["世",true],["尊",true],["，",false]],[["如",true],["来",true],["说",true],["是",true],["沙",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["如",true],["一",true],["恒",true],["河",true],["中",true],["所",true],["有",true],["沙",true],["，",false]],[["有",true],["如",true],["是",true],["沙",true],["等",true],["恒",true],["河",true],["，",false]],[["是",true],["诸",true],["恒",true],["河",true],["所",true],["有",true],["沙",true],["数",true],["佛",true],["世",true],["界",true],["，",false]],[["如",true],["是",true],["，",false]],[["宁",true],["为",true],["多",true],["不",true],["？",false]],[["甚",true],["多",true],["，",false]],[["世",true],["尊",true],["。",false]],[["佛",true],["告",true],["须",true],["菩",true],["提",true],["，",false]],[["尔",true],["所",true],["国",true],["土",true],["中",true],["所",true],["有",true],["众",true],["生",true],["，",false]],[["若",true],["干",true],["种",true],["心",true],["，",false]],[["如",true],["来",true],["悉",true],["知",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["如",true],["来",true],["说",true],["诸",true],["心",true],["皆",true],["为",true],["非",true],["心",true],["，",false]],[["是",true],["名",true],["为",true],["心",true],["。",false]],[["所",true],["以",true],["者",true],["何",true],["？",false]],[["须",true],["菩",true],["提",true],["。",false]],[["过",true],["去",true],["心",true],["不",true],["可",true],["得",true],["，",false]],[["现",true],["在",true],["心",true],["不",true],["可",true],["得",true],["，",false]],[["未",true],["来",true],["心",true],["不",true],["可",true],["得",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["若",true],["有",true],["人",true],["满",true],["三",true],["千",true],["大",true],["千",true],["世",true],["界",true],["七",true],["宝",true],["，",false]],[["以",true],["用",true],["布",true],["施",true],["，",false]],[["是",true],["人",true],["以",true],["是",true],["因",true],["缘",true],["，",false]],[["得",true],["福",true],["多",true],["不",true],["？",false]],[["如",true],["是",true],["，",false]],[["世",true],["尊",true],["，",false]],[["此",true],["人",true],["以",true],["是",true],["因",true],["缘",true],["，",false]],[["得",true],["福",true],["甚",true],["多",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["福",true],["德",true],["有",true],["实",true],["，",false]],[["如",true],["来",true],["不",true],["说",true],["得",true],["福",true],["德",true],["多",true],["。",false]],[["以",true],["福",true],["德",true],["无",true],["故",true],["，",false]],[["如",true],["来",true],["说",true],["得",true],["福",true],["德",true],["多",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["佛",true],["可",true],["以",true],["具",true],["足",true],["色",true],["身",true],["见",true],["不",true],["？",false]],[["不",true],["也",true],["，",false]],[["世",true],["尊",true],["！",false]],[["如",true],["来",true],["不",true],["应",true],["以",true],["具",true],["足",true],["色",true],["身",true],["见",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["如",true],["来",true],["说",true],["具",true],["足",true],["色",true],["身",true],["，",false]],[["即",true],["非",true],["具",true],["足",true],["色",true],["身",true],["，",false]],[["是",true],["名",true],["具",true],["足",true],["色",true],["身",true],["。",false]],[["须",true],["菩",true],["提",true],["。",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["如",true],["来",true],["可",true],["以",true],["具",true],["足",true],["诸",true],["相",true],["见",true],["不",true],["？",false]],[["不",true],["也",true],["，",false]],[["世",true],["尊",true],["，",false]],[["如",true],["来",true],["不",true],["应",true],["以",true],["具",true],["足",true],["诸",true],["相",true],["见",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["如",true],["来",true],["说",true],["诸",true],["相",true],["具",true],["足",true],["，",false]],[["即",true],["非",true],["具",true],["足",true],["，",false]],[["是",true],["名",true],["诸",true],["相",true],["具",true],["足",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["汝",true],["勿",true],["谓",true],["如",true],["来",true],["作",true],["是",true],["念",true],["，",false]],[["我",true],["当",true],["有",true],["所",true],["说",true],["法",true],["。",false]],[["莫",true],["作",true],["是",true],["念",true],["，",false]],[["何",true],["以",true],["故",true],["？",false]],[["若",true],["人",true],["言",true],["如",true],["来",true],["有",true],["所",true],["说",true],["法",true],["，",false]],[["即",true],["为",true],["谤",true],["佛",true],["，",false]],[["不",true],["能",true],["解",true],["我",true],["所",true],["说",true],["故",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["说",true],["法",true],["者",true],["无",true],["法",true],["可",true],["说",true],["，",false]],[["是",true],["名",true],["说",true],["法",true],["。",false]],[["尔",true],["时",true],["，",false]],[["慧",true],["命",true],["须",true],["菩",true],["提",true],["白",true],["佛",true],["言",true],["：",false]],[["世",true],["尊",true],["，",false]],[["颇",true],["有",true],["众",true],["生",true],["，",false]],[["于",true],["未",true],["来",true],["世",true],["，",false]],[["闻",true],["说",true],["是",true],["法",true],["，",false]],[["生",true],["信",true],["心",true],["不",true],["？",false]],[["佛",true],["言",true],["：",false]],[["须",true],["菩",true],["提",true],["，",false]],[["彼",true],["非",true],["众",true],["生",true],["，",false]],[["非",true],["不",true],["众",true],["生",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["众",true],["生",true],["众",true],["生",true],["者",true],["，",false]],[["如",true],["来",true],["说",true],["非",true],["众",true],["生",true],["，",false]],[["是",true],["名",true],["众",true],["生",true],["。",false]],[["须",true],["菩",true],["提",true],["白",true],["佛",true],["言",true],["：",false]],[["世",true],["尊",true],["，",false]],[["佛",true],["得",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["，",false]],[["为",true],["无",true],["所",true],["得",true],["耶",true],["？",false]],[["佛",true],["言",true],["：",false]],[["如",true],["是",true],["！",false]],[["如",true],["是",true],["！",false]],[["须",true],["菩",true],["提",true],["，",false]],[["我",true],["于",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["，",false]],[["乃",true],["至",true],["无",true],["有",true],["少",true],["法",true],["可",true],["得",true],["，",false]],[["是",true],["名",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["。",false]],[["复",true],["次",true],["，",false]],[["须",true],["菩",true],["提",true],["，",false]],[["是",true],["法",true],["平",true],["等",true],["，",false]],[["无",true],["有",true],["高",true],["下",true],["，",false]],[["是",true],["名",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["。",false]],[["以",true],["无",true],["我",true],["、",false],["无",true],["人",true],["、",false],["无",true],["众",true],["生",true],["、",false],["无",true],["寿",true],["者",true],["，",false]],[["修",true],["一",true],["切",true],["善",true],["法",true],["，",false]],[["即",true],["得",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["所",true],["言",true],["善",true],["法",true],["者",true],["，",false]],[["如",true],["来",true],["说",true],["即",true],["非",true],["善",true],["法",true],["，",false]],[["是",true],["名",true],["善",true],["法",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["三",true],["千",true],["大",true],["千",true],["世",true],["界",true],["中",true],["所",true],["有",true],["诸",true],["须",true],["弥",true],["山",true],["王",true],["，",false]],[["如",true],["是",true],["等",true],["七",true],["宝",true],["聚",true],["，",false]],[["有",true],["人",true],["持",true],["用",true],["布",true],["施",true],["，",false]],[["若",true],["人",true],["以",true],["此",true],["般",true],["若",true],["波",true],["罗",true],["蜜",true],["经",true],["乃",true],["至",true],["四",true],["句",true],["偈",true],["等",true],["，",false]],[["受",true],["持",true],["读",true],["诵",true],["，",false]],[["为",true],["他",true],["人",true],["说",true],["，",false]],[["于",true],["前",true],["福",true],["德",true],["，",false]],[["百",true],["分",true],["不",true],["及",true],["一",true],["，",false]],[["百",true],["千",true],["万",true],["亿",true],["分",true],["，",false]],[["乃",true],["至",true],["算",true],["数",true],["譬",true],["喻",true],["所",true],["不",true],["能",true],["及",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["汝",true],["等",true],["勿",true],["谓",true],["如",true],["来",true],["作",true],["是",true],["念",true],["，",false]],[["我",true],["当",true],["度",true],["众",true],["生",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["莫",true],["作",true],["是",true],["念",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["实",true],["无",true],["有",true],["众",true],["生",true],["如",true],["来",true],["度",true],["者",true],["。",false]],[["若",true],["有",true],["众",true],["生",true],["如",true],["来",true],["度",true],["者",true],["，",false]],[["如",true],["来",true],["即",true],["有",true],["我",true],["、",false],["人",true],["、",false],["众",true],["生",true],["、",false],["寿",true],["者",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["如",true],["来",true],["说",true],["有",true],["我",true],["者",true],["，",false]],[["即",true],["非",true],["有",true],["我",true],["。",false]],[["而",true],["凡",true],["夫",true],["之",true],["人",true],["以",true],["为",true],["有",true],["我",true],["，",false]],[["须",true],["菩",true],["提",true],["，",false]],[["凡",true],["夫",true],["者",true],["，",false]],[["如",true],["来",true],["说",true],["即",true],["非",true],["凡",true],["夫",true],["，",false]],[["是",true],["名",true],["凡",true],["夫",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["可",true],["以",true],["三",true],["十",true],["二",true],["相",true],["观",true],["如",true],["来",true],["不",true],["？",false]],[["须",true],["菩",true],["提",true],["言",true],["：",false]],[["如",true],["是",true],["，",false]],[["如",true],["是",true],["。",false]],[["以",true],["三",true],["十",true],["二",true],["相",true],["观",true],["如",true],["来",true],["。",false]],[["佛",true],["言",true],["：",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["以",true],["三",true],["十",true],["二",true],["相",true],["观",true],["如",true],["来",true],["者",true],["，",false]],[["转",true],["轮",true],["圣",true],["王",true],["即",true],["是",true],["如",true],["来",true],["。",false]],[["须",true],["菩",true],["提",true],["白",true],["佛",true],["言",true],["：",false]],[["世",true],["尊",true],["，",false]],[["如",true],["我",true],["解",true],["佛",true],["所",true],["说",true],["义",true],["，",false]],[["不",true],["应",true],["以",true],["三",true],["十",true],["二",true],["相",true],["观",true],["如",true],["来",true],["。",false]],[["尔",true],["时",true],["，",false]],[["世",true],["尊",true],["而",true],["说",true],["偈",true],["言",true],["：",false]],[["若",true],["以",true],["色",true],["见",true],["我",true],["，",false]],[["以",true],["音",true],["声",true],["求",true],["我",true],["，",false]],[["是",true],["人",true],["行",true],["邪",true],["道",true],["，",false]],[["不",true],["能",true],["见",true],["如",true],["来",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["汝",true],["若",true],["作",true],["是",true],["念",true],["，",false]],[["如",true],["来",true],["不",true],["以",true],["具",true],["足",true],["相",true],["故",true],["，",false]],[["得",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["莫",true],["作",true],["是",true],["念",true],["，",false]],[["如",true],["来",true],["不",true],["以",true],["具",true],["足",true],["相",true],["故",true],["，",false]],[["得",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["汝",true],["若",true],["作",true],["是",true],["念",true],["，",false]],[["发",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["心",true],["者",true],["，",false]],[["说",true],["诸",true],["法",true],["断",true],["灭",true],["，",false]],[["莫",true],["作",true],["是",true],["念",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["发",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["心",true],["者",true],["，",false]],[["于",true],["法",true],["不",true],["说",true],["断",true],["灭",true],["相",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["菩",true],["萨",true],["以",true],["满",true],["恒",true],["河",true],["沙",true],["等",true],["世",true],["界",true],["七",true],["宝",true],["，",false]],[["持",true],["用",true],["布",true],["施",true],["。",false]],[["若",true],["复",true],["有",true],["人",true],["，",false]],[["知",true],["一",true],["切",true],["法",true],["无",true],["我",true],["，",false]],[["得",true],["成",true],["于",true],["忍",true],["。",false]],[["此",true],["菩",true],["萨",true],["胜",true],["前",true],["菩",true],["萨",true],["所",true],["得",true],["功",true],["德",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["以",true],["诸",true],["菩",true],["萨",true],["不",true],["受",true],["福",true],["德",true],["故",true],["。",false]],[["须",true],["菩",true],["提",true],["白",true],["佛",true],["言",true],["：",false]],[["世",true],["尊",true],["，",false]],[["云",true],["何",true],["菩",true],["萨",true],["不",true],["受",true],["福",true],["德",true],["？",false]],[["须",true],["菩",true],["提",true],["，",false]],[["菩",true],["萨",true],["所",true],["作",true],["福",true],["德",true],["，",false]],[["不",true],["应",true],["贪",true],["着",true],["。",false]],[["是",true],["故",true],["说",true],["不",true],["受",true],["福",true],["德",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["有",true],["人",true],["言",true],["，",false]],[["如",true],["来",true],["若",true],["来",true],["若",true],["去",true],["、",false],["若",true],["坐",true],["若",true],["卧",true],["，",false]],[["是",true],["人",true],["不",true],["解",true],["我",true],["所",true],["说",true],["义",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["如",true],["来",true],["者",true],["，",false]],[["无",true],["所",true],["从",true],["来",true],["，",false]],[["亦",true],["无",true],["所",true],["去",true],["，",false]],[["故",true],["名",true],["如",true],["来",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["善",true],["男",true],["子",true],["、",false],["善",true],["女",true],["人",true],["，",false]],[["以",true],["三",true],["千",true],["大",true],["千",true],["世",true],["界",true],["碎",true],["为",true],["微",true],["尘",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["是",true],["微",true],["尘",true],["众",true],["，",false]],[["宁",true],["为",true],["多",true],["不",true],["？",false]],[["须",true],["菩",true],["提",true],["言",true],["：",false]],[["甚",true],["多",true],["，",false]],[["世",true],["尊",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["若",true],["是",true],["微",true],["尘",true],["众",true],["实",true],["有",true],["者",true],["，",false]],[["佛",true],["即",true],["不",true],["说",true],["是",true],["微",true],["尘",true],["众",true],["。",false]],[["所",true],["以",true],["者",true],["何",true],["？",false]],[["佛",true],["说",true],["微",true],["尘",true],["众",true],["，",false]],[["即",true],["非",true],["微",true],["尘",true],["众",true],["，",false]],[["是",true],["名",true],["微",true],["尘",true],["众",true],["。",false]],[["世",true],["尊",true],["，",false]],[["如",true],["来",true],["所",true],["说",true],["三",true],["千",true],["大",true],["千",true],["世",true],["界",true],["，",false]],[["即",true],["非",true],["世",true],["界",true],["，",false]],[["是",true],["名",true],["世",true],["界",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["若",true],["世",true],["界",true],["实",true],["有",true],["者",true],["，",false]],[["即",true],["是",true],["一",true],["合",true],["相",true],["。",false]],[["如",true],["来",true],["说",true],["一",true],["合",true],["相",true],["，",false]],[["即",true],["非",true],["一",true],["合",true],["相",true],["，",false]],[["是",true],["名",true],["一",true],["合",true],["相",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["一",true],["合",true],["相",true],["者",true],["，",false]],[["即",true],["是",true],["不",true],["可",true],["说",true],["。",false]],[["但",true],["凡",true],["夫",true],["之",true],["人",true],["，",false]],[["贪",true],["着",true],["其",true],["事",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["人",true],["言",true],["，",false]],[["佛",true],["说",true],["我",true],["见",true],["、",false],["人",true],["见",true],["、",false],["众",true],["生",true],["见",true],["、",false],["寿",true],["者",true],["见",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["于",true],["意",true],["云",true],["何",true],["？",false]],[["是",true],["人",true],["解",true],["我",true],["所",true],["说",true],["义",true],["不",true],["？",false]],[["不",true],["也",true],["，",false]],[["世",true],["尊",true],["。",false]],[["是",true],["人",true],["不",true],["解",true],["如",true],["来",true],["所",true],["说",true],["义",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["世",true],["尊",true],["说",true],["我",true],["见",true],["、",false],["人",true],["见",true],["、",false],["众",true],["生",true],["见",true],["、",false],["寿",true],["者",true],["见",true],["，",false]],[["即",true],["非",true],["我",true],["见",true],["、",false],["人",true],["见",true],["、",false],["众",true],["生",true],["见",true],["、",false],["寿",true],["者",true],["见",true],["，",false]],[["是",true],["名",true],["我",true],["见",true],["、",false],["人",true],["见",true],["、",false],["众",true],["生",true],["见",true],["、",false],["寿",true],["者",true],["见",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["发",true],["阿",true],["耨",true],["多",true],["罗",true],["三",true],["藐",true],["三",true],["菩",true],["提",true],["心",true],["者",true],["，",false]],[["于",true],["一",true],["切",true],["法",true],["，",false]],[["应",true],["如",true],["是",true],["知",true],["，",false]],[["如",true],["是",true],["见",true],["，",false]],[["如",true],["是",true],["信",true],["解",true],["，",false]],[["不",true],["生",true],["法",true],["相",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["所",true],["言",true],["法",true],["相",true],["者",true],["，",false]],[["如",true],["来",true],["说",true],["即",true],["非",true],["法",true],["相",true],["，",false]],[["是",true],["名",true],["法",true],["相",true],["。",false]],[["须",true],["菩",true],["提",true],["，",false]],[["若",true],["有",true],["人",true],["以",true],["满",true],["无",true],["量",true],["阿",true],["僧",true],["祇",true],["世",true],["界",true],["七",true],["宝",true],["，",false]],[["持",true],["用",true],["布",true],["施",true],["。",false]],[["若",true],["有",true],["善",true],["男",true],["子",true],["、",false],["善",true],["女",true],["人",true],["，",false]],[["发",true],["菩",true],["提",true],["心",true],["者",true],["，",false]],[["持",true],["于",true],["此",true],["经",true],["，",false]],[["乃",true],["至",true],["四",true],["句",true],["偈",true],["等",true],["，",false]],[["受",true],["持",true],["读",true],["诵",true],["，",false]],[["为",true],["人",true],["演",true],["说",true],["，",false]],[["其",true],["福",true],["胜",true],["彼",true],["。",false]],[["云",true],["何",true],["为",true],["人",true],["演",true],["说",true],["？",false]],[["不",true],["取",true],["于",true],["相",true],["，",false]],[["如",true],["如",true],["不",true],["动",true],["。",false]],[["何",true],["以",true],["故",true],["？",false]],[["一",true],["切",true],["有",true],["为",true],["法",true],["，",false]],[["如",true],["梦",true],["幻",true],["泡",true],["影",true],["，",false]],[["如",true],["露",true],["亦",true],["如",true],["电",true],["，",false]],[["应",true],["作",true],["如",true],["是",true],["观",true],["。",false]],[["佛",true],["说",true],["是",true],["经",true],["已",true],["，",false]],[["长",true],["老",true],["须",true],["菩",true],["提",true],["及",true],["诸",true],["比",true],["丘",true],["、",false],["比",true],["丘",true],["尼",true],["、",false],["优",true],["婆",true],["塞",true],["、",false],["优",true],["婆",true],["夷",true],["，",false]],[["一",true],["切",true],["世",true],["间",true],["天",true],["、",false],["人",true],["、",false],["阿",true],["修",true],["罗",true],["，",false]],[["闻",true],["佛",true],["所",true],["说",true],["，",false]],[["皆",true],["大",true],["欢",true],["喜",true],["，",false]],[["信",true],["受",true],["奉",true],["行",true],["。",false]]];
+(function(){
+  var DATA = window.TRACE_DATA;
+  var total = DATA.length;
+  var current = 0;
+  var pagesEl = document.getElementById('pages');
+  var pageLabel = document.getElementById('pagelabel');
+  var progressFill = document.getElementById('progress-fill');
+  var prevBtn = document.getElementById('prevbtn');
+  var nextBtn = document.getElementById('nextbtn');
+  var clearBtn = document.getElementById('clearbtn');
+  var offlineBanner = document.getElementById('offline-banner');
+  var SVGNS = 'http://www.w3.org/2000/svg';
+
+  if (typeof HanziWriter === 'undefined') {
+    offlineBanner.style.display = 'block';
+  }
+
+  var pageEls = [];
+  var pageCells = [];   // array of svg elements per page (for clear-all)
+  var builtPages = {};
+
+  function buildCharCell(ch) {
+    var svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 100 100');
+    svg.setAttribute('class', 'cell');
+
+    var gridG = document.createElementNS(SVGNS, 'g');
+    function line(x1, y1, x2, y2, dash) {
+      var l = document.createElementNS(SVGNS, 'line');
+      l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+      l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+      l.setAttribute('stroke', '#d8c9ac');
+      l.setAttribute('stroke-width', '0.6');
+      if (dash) l.setAttribute('stroke-dasharray', dash);
+      gridG.appendChild(l);
+    }
+    line(50, 2, 50, 98, '3,2');
+    line(2, 50, 98, 50, '3,2');
+    line(5, 5, 95, 95, '2,2');
+    line(95, 5, 5, 95, '2,2');
+    svg.appendChild(gridG);
+
+    var charG = document.createElementNS(SVGNS, 'g');
+    svg.appendChild(charG);
+
+    if (typeof HanziWriter === 'undefined') {
+      var txt0 = document.createElementNS(SVGNS, 'text');
+      txt0.setAttribute('x', '50'); txt0.setAttribute('y', '62');
+      txt0.setAttribute('text-anchor', 'middle');
+      txt0.setAttribute('font-size', '55');
+      txt0.setAttribute('fill', '#7a1f1f');
+      txt0.textContent = ch;
+      charG.appendChild(txt0);
+      return svg;
+    }
+
+    HanziWriter.loadCharacterData(ch).then(function(data) {
+      var td = HanziWriter.getScalingTransform(100, 100, 10);
+      charG.setAttribute('transform', td.transform);
+
+      var paths = [];
+      data.strokes.forEach(function(d) {
+        var p = document.createElementNS(SVGNS, 'path');
+        p.setAttribute('d', d);
+        p.setAttribute('class', 'stroke-path');
+        p.setAttribute('vector-effect', 'non-scaling-stroke');
+        charG.appendChild(p);
+        paths.push(p);
+      });
+
+      var filled = paths.map(function(){ return false; });
+
+      function pointCheck(clientX, clientY) {
+        for (var i = 0; i < paths.length; i++) {
+          if (filled[i]) continue;
+          var ctm = paths[i].getScreenCTM();
+          if (!ctm) continue;
+          var pt = svg.createSVGPoint();
+          pt.x = clientX; pt.y = clientY;
+          var local = pt.matrixTransform(ctm.inverse());
+          if (paths[i].isPointInFill(local)) {
+            filled[i] = true;
+            paths[i].classList.add('filled');
+          }
+        }
+      }
+
+      var down = false;
+      function handleDown(e) {
+        down = true;
+        try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+        pointCheck(e.clientX, e.clientY);
+        e.preventDefault();
+      }
+      function handleMove(e) {
+        if (!down) return;
+        pointCheck(e.clientX, e.clientY);
+        e.preventDefault();
+      }
+      function handleUp() { down = false; }
+
+      svg.addEventListener('pointerdown', handleDown);
+      svg.addEventListener('pointermove', handleMove);
+      svg.addEventListener('pointerup', handleUp);
+      svg.addEventListener('pointercancel', handleUp);
+
+      svg._resetCell = function() {
+        for (var i = 0; i < filled.length; i++) { filled[i] = false; }
+        paths.forEach(function(p) { p.classList.remove('filled'); });
+      };
+    }).catch(function() {
+      var txt = document.createElementNS(SVGNS, 'text');
+      txt.setAttribute('x', '50'); txt.setAttribute('y', '62');
+      txt.setAttribute('text-anchor', 'middle');
+      txt.setAttribute('font-size', '55');
+      txt.setAttribute('fill', '#7a1f1f');
+      txt.setAttribute('opacity', '0.5');
+      txt.textContent = ch;
+      charG.appendChild(txt);
+    });
+
+    return svg;
+  }
+
+  function buildPage(i) {
+    if (builtPages[i]) return;
+    builtPages[i] = true;
+
+    var pageDiv = pageEls[i];
+    var card = document.createElement('div');
+    card.className = 'card';
+    var row = document.createElement('div');
+    row.className = 'row';
+
+    var cellsForPage = [];
+    var tokens = DATA[i];
+    for (var j = 0; j < tokens.length; j++) {
+      var ch = tokens[j][0];
+      var isChar = tokens[j][1];
+      if (isChar) {
+        var wrap = document.createElement('div');
+        wrap.className = 'cell-wrap';
+        var svgCell = buildCharCell(ch);
+        wrap.appendChild(svgCell);
+        row.appendChild(wrap);
+        cellsForPage.push(svgCell);
+      } else {
+        var pc = document.createElement('div');
+        pc.className = 'punct-cell';
+        pc.textContent = ch;
+        row.appendChild(pc);
+      }
+    }
+    card.appendChild(row);
+    pageDiv.appendChild(card);
+    pageCells[i] = cellsForPage;
+  }
+
+  for (var i = 0; i < total; i++) {
+    var pageDiv = document.createElement('div');
+    pageDiv.className = 'page';
+    pagesEl.appendChild(pageDiv);
+    pageEls.push(pageDiv);
+    pageCells.push([]);
+  }
+
+  function render(newIndex) {
+    if (newIndex < 0 || newIndex >= total) return;
+    var oldIndex = current;
+    if (oldIndex !== newIndex) {
+      pageEls[oldIndex].classList.remove('active');
+    }
+    current = newIndex;
+    buildPage(current);
+    pageEls[current].classList.add('active');
+    pageLabel.textContent = (current + 1) + ' / ' + total;
+    progressFill.style.width = (((current + 1) / total) * 100) + '%';
+    prevBtn.classList.toggle('disabled', current === 0);
+    nextBtn.classList.toggle('disabled', current === total - 1);
+    if (current + 1 < total) buildPage(current + 1);
+    if (current - 1 >= 0) buildPage(current - 1);
+  }
+
+  function next() { if (current < total - 1) render(current + 1); }
+  function prev() { if (current > 0) render(current - 1); }
+
+  prevBtn.addEventListener('click', prev);
+  nextBtn.addEventListener('click', next);
+
+  clearBtn.addEventListener('click', function() {
+    var cells = pageCells[current] || [];
+    cells.forEach(function(svg) {
+      if (svg._resetCell) svg._resetCell();
+    });
+  });
+
+  // swipe navigation on non-cell areas
+  var touchStartX = null, touchStartY = null;
+  function isInsideCell(el) {
+    while (el && el !== document.body) {
+      if (el.classList && el.classList.contains('cell')) return true;
+      if (el.tagName === 'path' || el.tagName === 'line') return true;
+      el = el.parentElement || el.parentNode;
+    }
+    return false;
+  }
+  function swipeStart(e) {
+    var t = e.touches ? e.touches[0] : e;
+    if (isInsideCell(e.target)) { touchStartX = null; return; }
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+  }
+  function swipeEnd(e) {
+    if (touchStartX === null) return;
+    var t = e.changedTouches ? e.changedTouches[0] : e;
+    var dx = t.clientX - touchStartX;
+    var dy = t.clientY - touchStartY;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) next(); else prev();
+    }
+    touchStartX = null;
+  }
+  document.getElementById('app').addEventListener('touchstart', swipeStart, {passive:true});
+  document.getElementById('app').addEventListener('touchend', swipeEnd, {passive:true});
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight') next();
+    if (e.key === 'ArrowLeft') prev();
+  });
+
+  function start() { render(0); }
+
+  if (typeof HanziWriter === 'undefined') {
+    setTimeout(function() {
+      if (typeof HanziWriter === 'undefined') {
+        offlineBanner.style.display = 'block';
+      }
+      start();
+    }, 1500);
+  } else {
+    start();
+  }
+})();
+</script>
+</body>
+</html>
