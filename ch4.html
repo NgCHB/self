@@ -6,7 +6,6 @@
 <title>Chord Sheet Converter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.5/tesseract.min.js"></script>
 <style>
   :root{
     --bg:#FFFFFF;
@@ -46,7 +45,7 @@
     margin:0;
     color:var(--ink-dim);
     font-size:14px;
-    max-width:60ch;
+    max-width:64ch;
   }
   .controls{
     display:flex;
@@ -80,7 +79,8 @@
   .controls-row input[type="text"]:focus-visible,
   textarea:focus-visible,
   button:focus-visible,
-  .chord-badge:focus-visible{
+  .chord-badge:focus-visible,
+  #output:focus-visible{
     outline:2px solid var(--gold);
     outline-offset:2px;
   }
@@ -245,6 +245,9 @@
     font-size:13.5px;
     line-height:1.9;
   }
+  #output[contenteditable="true"]{
+    cursor:text;
+  }
   #output .line{
     white-space:pre-wrap;
     padding:2px 10px 2px 12px;
@@ -264,13 +267,21 @@
     letter-spacing:0.06em;
     font-family:'Inter',sans-serif;
   }
+  #output .line.drop-target{
+    background:rgba(166,121,30,0.08);
+    border-left-color:var(--gold);
+  }
   #output .chord-badge{
     color:var(--gold);
     font-weight:600;
-    cursor:pointer;
+    cursor:grab;
     border:1px solid transparent;
     border-radius:4px;
     padding:0 1px;
+    user-select:none;
+  }
+  #output .chord-badge:active{
+    cursor:grabbing;
   }
   #output .chord-badge:hover{
     background:rgba(166,121,30,0.14);
@@ -280,6 +291,9 @@
     background:var(--wine);
     color:#fff;
     border-color:var(--wine);
+  }
+  #output .chord-badge.dragging{
+    opacity:0.35;
   }
   #output .meta{ color:var(--ink-dim); }
   #output .placeholder{
@@ -314,38 +328,6 @@
   }
   ::selection{ background:rgba(212,166,58,0.25); }
 
-  .pane-body.drag-over{
-    outline:2px dashed var(--gold);
-    outline-offset:-2px;
-    background:rgba(166,121,30,0.06);
-  }
-  .ocr-overlay{
-    display:none;
-    position:absolute;
-    inset:0;
-    background:rgba(247,246,243,0.94);
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:12px;
-    font-family:'Inter',sans-serif;
-    font-size:13px;
-    color:var(--ink-dim);
-    z-index:5;
-    text-align:center;
-    padding:20px;
-  }
-  .ocr-overlay.visible{ display:flex; }
-  .ocr-spinner{
-    width:26px;
-    height:26px;
-    border-radius:50%;
-    border:2.5px solid var(--hairline);
-    border-top-color:var(--gold);
-    animation:ocr-spin 0.8s linear infinite;
-  }
-  @keyframes ocr-spin{ to{ transform:rotate(360deg); } }
-
   @media (max-width: 860px){
     body{ overflow-x:hidden; }
     main{ flex-direction:column; }
@@ -358,7 +340,7 @@
 
 <header>
   <h1>Chord Sheet <span>Converter</span></h1>
-  <p>Paste legacy chord-over-lyric HTML — or a screenshot of a chord sheet — on the left. Get inline <code>[Chord]lyric</code> notation, ready for <code>.chord-sheet</code>, on the right. Click any chord in the output to select it, then nudge it by letter or word.</p>
+  <p>Paste legacy chord-over-lyric HTML on the left. Get inline <code>[Chord]lyric</code> notation, ready for <code>.chord-sheet</code>, on the right. Click a chord badge to select it and nudge it by letter or word, drag a badge to drop it somewhere new, or click straight into the text to edit it directly: delete spaces, add line breaks, or type a new chord as <code>[Chord]</code>.</p>
 </header>
 
 <div class="controls">
@@ -366,7 +348,6 @@
     <input type="number" id="cjkWidth" value="2.3" step="0.1" min="1" max="4">
   </label>
   <span style="font-size:12px;color:var(--ink-dim);">tune if chords land a syllable early/late — or just click a chord and nudge it</span>
-  <span style="font-size:12px;color:var(--ink-dim);">for OCR: crop tight, shoot straight-on in good light, avoid glare/blur</span>
   <div class="flag-badge" id="flagBadge" style="display:none;">
     <span class="dot"></span><span id="flagCount">0</span> line(s) flagged for review
   </div>
@@ -389,17 +370,9 @@
   <div class="pane">
     <div class="pane-head">
       <h2>Legacy HTML</h2>
-      <button class="copy-btn" id="uploadBtn" type="button">
-        <span>Upload photo</span>
-      </button>
-      <input type="file" id="uploadInput" accept="image/*" style="display:none;">
     </div>
-    <div class="pane-body" id="inputPaneBody">
-      <textarea id="input" placeholder="Paste your exported <p>/<br> chord sheet HTML here… or paste/drop a screenshot to read chords + lyrics from an image." spellcheck="false"></textarea>
-      <div class="ocr-overlay" id="ocrOverlay">
-        <div class="ocr-spinner"></div>
-        <div id="ocrStatus">Reading screenshot…</div>
-      </div>
+    <div class="pane-body">
+      <textarea id="input" placeholder="Paste your exported <p>/<br> chord sheet HTML here…" spellcheck="false"></textarea>
     </div>
   </div>
 
@@ -419,10 +392,10 @@
         <button type="button" data-action="word" data-dir="1" title="Move a word right">&raquo;</button>
         <button type="button" data-action="deselect" title="Deselect (Esc)">&times;</button>
       </div>
-      <span class="nudge-hint">&larr;/&rarr; = letter &middot; Shift+&larr;/&rarr; = word</span>
+      <span class="nudge-hint">&larr;/&rarr; = letter &middot; Shift+&larr;/&rarr; = word &middot; drag a badge to move it</span>
     </div>
     <div class="pane-body">
-      <div id="output"><div class="placeholder">Converted chord-sheet HTML will appear here.</div></div>
+      <div id="output" spellcheck="false"><div class="placeholder">Converted chord-sheet HTML will appear here.</div></div>
     </div>
   </div>
 </main>
@@ -561,7 +534,7 @@ const CAPO_LINE_RE = /^capo\b/i;
 // positions, and chords as structured data (rather than a flat merged
 // string) so chords can be nudged after the fact - the CJK-width slider
 // rarely gets every chord exactly right, and mis-landed ones can be moved
-// by hand.
+// by hand, or the line can just be edited directly in the output.
 function convert(html, cjkWidth){
   const lines = htmlToLines(html);
   const results = [];
@@ -591,6 +564,42 @@ function convert(html, cjkWidth){
     results.push(entry);
   }
   return {composerLine: escapeHtml(composerLine), lines: results};
+}
+
+// Parses a raw "[Chord]lyric" line (whether it came from auto-conversion or
+// was typed/edited by hand directly in the output pane) back into the
+// {chars, wordStarts, chords, flagged} shape used everywhere else. Because
+// this is driven purely off the visible "[...]" bracket text, a chord the
+// user types by hand is treated exactly the same as one placed automatically.
+function parseBodyLine(line){
+  const chars = [];
+  const chords = [];
+  let i = 0;
+  while(i < line.length){
+    if(line[i] === "["){
+      const end = line.indexOf("]", i);
+      if(end !== -1){
+        const chordName = line.slice(i+1, end);
+        chords.push({id: nextChordId++, chord: chordName, pos: chars.length});
+        i = end + 1;
+        continue;
+      }
+    }
+    chars.push(line[i]);
+    i++;
+  }
+  const wordStarts = computeWordStarts(chars);
+  const seenPos = new Set();
+  let flagged = false;
+  chords.forEach(c => {
+    if(seenPos.has(c.pos)) flagged = true;
+    seenPos.add(c.pos);
+  });
+  return {chars, wordStarts, chords, flagged};
+}
+
+function parseBodyText(text){
+  return text.split("\n").map(parseBodyLine);
 }
 
 const inputEl = document.getElementById("input");
@@ -647,11 +656,15 @@ function buildFooterBlock(videoField){
 
 // --- App state ---
 // state.lines holds the *editable* chord/lyric structure produced by
-// convert(). Nudging a chord only ever mutates a chord's `pos` inside this
-// structure and re-renders - it never re-runs convert(), so manual fixes
+// convert() (or reparsed straight off the output pane's own text via
+// parseBodyText()). Nudging a chord, dragging a chord, or typing/deleting
+// directly in the output, only ever mutates this structure (or is read back
+// into it) and re-renders - it never re-runs convert(), so manual fixes
 // survive edits to unrelated fields (key, capo, video).
 let state = { composerLine: "", headerBlock: "", footerBlock: "", lines: [], selected: null };
 let currentRawOutput = "";
+let suppressNextInput = false; // guards against our own re-renders firing the input listener
+let dragInfo = null; // {lineIndex, chordId} of the badge currently being dragged
 
 function fullConvert(){
   const html = inputEl.value;
@@ -671,7 +684,7 @@ function fullConvert(){
 }
 
 // Rebuilds only the header/footer block (Key/Capo/video). Deliberately does
-// NOT touch state.lines, so any chords you've nudged by hand stay put.
+// NOT touch state.lines, so any chords you've nudged or hand-edited stay put.
 function rebuildHeaderFooter(){
   state.headerBlock = buildHeaderBlock(state.composerLine, perfKeyEl.value, capoLineEl.value);
   state.footerBlock = buildFooterBlock(videoIdEl.value);
@@ -693,7 +706,12 @@ function buildLineString(entry){
   return out;
 }
 
-// Renders one line as clickable chord badges + lyric text for the preview pane.
+function buildBodyText(){
+  return state.lines.map(buildLineString).join("\n");
+}
+
+// Renders one line as clickable + draggable chord badges plus editable
+// lyric text.
 function buildLinePreviewHTML(entry, lineIndex){
   const chords = entry.chords.slice().sort((a,b) => a.pos - b.pos);
   let inner = "";
@@ -702,12 +720,13 @@ function buildLinePreviewHTML(entry, lineIndex){
     while(ci < chords.length && chords[ci].pos === i){
       const c = chords[ci];
       const sel = state.selected && state.selected.lineIndex === lineIndex && state.selected.chordId === c.id;
-      inner += `<span class="chord-badge${sel ? " selected" : ""}" data-line="${lineIndex}" data-id="${c.id}">[${escapeHtml(c.chord)}]</span>`;
+      inner += `<span class="chord-badge${sel ? " selected" : ""}" contenteditable="false" draggable="true" data-line="${lineIndex}" data-id="${c.id}">[${escapeHtml(c.chord)}]</span>`;
       ci++;
     }
     if(i < entry.chars.length) inner += escapeHtml(entry.chars[i]);
   }
-  return `<div class="line${entry.flagged ? " flagged" : ""}">${inner}</div>\n`;
+  if(inner === "") inner = "<br>"; // keep empty lines selectable/editable
+  return `<div class="line${entry.flagged ? " flagged" : ""}" data-line-index="${lineIndex}">${inner}</div>`;
 }
 
 function updateToolbar(){
@@ -725,11 +744,33 @@ function updateToolbar(){
   nudgeChordNameEl.textContent = selectedChord.chord;
 }
 
-// Re-renders the output pane from current state without recomputing chord
-// positions - safe to call after a nudge or a header/footer-only change.
+// Builds the full raw output (header + chord-sheet body + footer) from
+// current state, for the Copy button.
+function computeFullRawOutput(){
+  if(state.lines.length === 0 && !state.headerBlock && !state.footerBlock) return "";
+  let rawText = "";
+  if(state.headerBlock) rawText += state.headerBlock + "\n";
+  rawText += '<div class="chord-sheet">\n';
+  rawText += buildBodyText();
+  if(state.lines.length > 0) rawText += "\n";
+  rawText += '</div>';
+  if(state.footerBlock) rawText += state.footerBlock;
+  return rawText;
+}
+
+function hasContent(){
+  return state.lines.length > 0 || !!state.headerBlock || !!state.footerBlock;
+}
+
+// Rebuilds the whole output pane's DOM from state. Only call this when it's
+// safe to lose the caret position (initial conversion, nudges, drops, blur,
+// header/footer field changes) - never on every keystroke of direct typing,
+// or the cursor would jump around.
 function renderOutput(){
-  if(state.lines.length === 0 && !state.headerBlock && !state.footerBlock){
+  if(!hasContent()){
+    suppressNextInput = true;
     outputEl.innerHTML = '<div class="placeholder">Converted chord-sheet HTML will appear here.</div>';
+    outputEl.contentEditable = "false";
     flagBadge.style.display = "none";
     currentRawOutput = "";
     updateToolbar();
@@ -737,41 +778,76 @@ function renderOutput(){
   }
 
   let previewHtml = "";
-  let rawText = "";
 
   if(state.headerBlock){
-    previewHtml += `<div class="meta">${escapeHtml(state.headerBlock)}</div>\n`;
-    rawText += state.headerBlock + "\n";
+    previewHtml += `<div class="meta" contenteditable="false">${escapeHtml(state.headerBlock)}</div>`;
   }
-  previewHtml += '<div class="meta">&lt;div class="chord-sheet"&gt;</div>\n';
-  rawText += '<div class="chord-sheet">\n';
+  previewHtml += '<div class="meta" contenteditable="false">&lt;div class="chord-sheet"&gt;</div>';
 
-  let flagged = 0;
   state.lines.forEach((entry, idx) => {
-    if(entry.flagged) flagged++;
     previewHtml += buildLinePreviewHTML(entry, idx);
-    rawText += buildLineString(entry) + "\n";
   });
 
-  previewHtml += '<div class="meta">&lt;/div&gt;</div>';
-  rawText += '</div>';
+  previewHtml += '<div class="meta" contenteditable="false">&lt;/div&gt;</div>';
 
   if(state.footerBlock){
-    previewHtml += `\n<div class="meta">${escapeHtml(state.footerBlock)}</div>`;
-    rawText += state.footerBlock;
+    previewHtml += `<div class="meta" contenteditable="false">${escapeHtml(state.footerBlock)}</div>`;
   }
 
+  suppressNextInput = true;
   outputEl.innerHTML = previewHtml;
-  currentRawOutput = rawText;
+  outputEl.contentEditable = "true";
+  currentRawOutput = computeFullRawOutput();
 
+  updateFlagBadge();
+  updateToolbar();
+}
+
+function updateFlagBadge(){
+  const flagged = state.lines.reduce((n, e) => n + (e.flagged ? 1 : 0), 0);
   if(flagged > 0){
     flagBadge.style.display = "flex";
     flagCount.textContent = flagged;
   } else {
     flagBadge.style.display = "none";
   }
+}
 
-  updateToolbar();
+// Reads the output pane's own DOM back into state.lines, using each direct
+// child <div class="line"> element's textContent - which already reads as
+// "[Chord]lyric" whether the brackets came from an auto-placed badge or
+// were typed by hand. Non-.line children (the header/footer/tag preview,
+// which are contenteditable="false" and not meant to feed back into state)
+// are skipped. Does NOT touch the DOM, so it's safe to call on every
+// keystroke without disturbing the caret.
+//
+// Chord ids are preserved across the resync (matched by line + sorted
+// position) rather than left as the fresh ids parseBodyLine hands out.
+// Without this, every resync would silently orphan whatever id a rendered
+// badge's data-id was carrying - which is exactly what broke badge
+// selection: clicking a badge called this function first, it would mint a
+// brand new id for that same chord, and the click handler's lookup by the
+// badge's (now stale) data-id would fail every time.
+function syncStateFromOutputDom(){
+  if(!outputEl.isContentEditable && outputEl.contentEditable !== "true") return;
+  const lineEls = Array.from(outputEl.children).filter(el => el.classList.contains("line"));
+  if(lineEls.length === 0 && state.lines.length === 0) return;
+  const raw = lineEls.map(el => el.textContent).join("\n");
+  const newLines = parseBodyText(raw);
+
+  newLines.forEach((entry, li) => {
+    const oldEntry = state.lines[li];
+    if(!oldEntry) return;
+    const oldSorted = oldEntry.chords.slice().sort((a,b) => a.pos - b.pos);
+    const newSorted = entry.chords.slice().sort((a,b) => a.pos - b.pos);
+    for(let i=0; i<newSorted.length && i<oldSorted.length; i++){
+      newSorted[i].id = oldSorted[i].id;
+    }
+  });
+
+  state.lines = newLines;
+  currentRawOutput = computeFullRawOutput();
+  updateFlagBadge();
 }
 
 // Moves the selected chord. unit:'letter' shifts one character at a time;
@@ -798,183 +874,45 @@ function nudgeChord(lineIndex, chordId, dir, unit){
   renderOutput();
 }
 
-// Upscales small/low-res images and stretches contrast to pure black/white
-// grayscale before OCR. Screenshots and phone photos of chord sheets are
-// often low-contrast or undersized, and Tesseract's accuracy drops sharply
-// below ~150-200dpi-equivalent text height - this cheap canvas pass fixes
-// both without needing any external image library.
-async function preprocessForOcr(fileOrBlob){
-  const bitmap = await createImageBitmap(fileOrBlob);
-  const scale = bitmap.width < 1400 ? Math.min(3, 1400 / bitmap.width) : 1;
-  const w = Math.max(1, Math.round(bitmap.width * scale));
-  const h = Math.max(1, Math.round(bitmap.height * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(bitmap, 0, 0, w, h);
-
-  const imgData = ctx.getImageData(0, 0, w, h);
-  const d = imgData.data;
-  const gray = new Uint8ClampedArray(w * h);
-  let lo = 255, hi = 0;
-  for(let i=0, p=0; i<d.length; i+=4, p++){
-    const g = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
-    gray[p] = g;
-    if(g < lo) lo = g;
-    if(g > hi) hi = g;
+// Given a .line element and viewport coordinates (from a click or a drop),
+// returns the index into that line's `chars` array the point corresponds
+// to - i.e. the same "pos" numbering chords use (chars.length == end of
+// line). Badge spans contribute zero plain characters; landing inside one
+// counts as the boundary just before it.
+function charIndexFromPoint(lineEl, clientX, clientY){
+  let node = null, offset = 0;
+  if(document.caretRangeFromPoint){
+    const range = document.caretRangeFromPoint(clientX, clientY);
+    if(range){ node = range.startContainer; offset = range.startOffset; }
+  } else if(document.caretPositionFromPoint){
+    const pos = document.caretPositionFromPoint(clientX, clientY);
+    if(pos){ node = pos.offsetNode; offset = pos.offset; }
   }
-  const range = Math.max(1, hi - lo);
-  for(let i=0, p=0; i<d.length; i+=4, p++){
-    const v = Math.round((gray[p] - lo) * 255 / range);
-    d[i] = d[i+1] = d[i+2] = v;
-  }
-  ctx.putImageData(imgData, 0, 0);
-  return await new Promise((resolve) => canvas.toBlob((b) => resolve(b || fileOrBlob), "image/png"));
-}
+  if(!node || !lineEl.contains(node)) return -1;
 
-// A single OCR worker is created once and reused across pastes/uploads, so
-// language data (eng + both Chinese scripts) only downloads and loads the
-// first time in a session. Parameters are tuned for chord sheets rather
-// than prose: dictionary-based word correction is switched off (it likes
-// to "fix" chord tokens like Dm into real words), inter-word spacing is
-// preserved (the alignment logic depends on it), and page segmentation is
-// set for a single variable-width column of text rather than general
-// document layout.
-let ocrWorkerPromise = null;
-let ocrLogger = null;
-
-async function getOcrWorker(){
-  if(!ocrWorkerPromise){
-    ocrWorkerPromise = (async () => {
-      const worker = await Tesseract.createWorker("eng+chi_sim+chi_tra", 1, {
-        logger: (m) => { if(ocrLogger) ocrLogger(m); }
-      });
-      await worker.setParameters({
-        preserve_interword_spaces: "1",
-        load_system_dawg: "0",
-        load_freq_dawg: "0",
-        tessedit_pageseg_mode: "4"
-      });
-      return worker;
-    })();
-  }
-  return ocrWorkerPromise;
-}
-// Lets the user paste or drop a screenshot of a chord sheet directly into
-// the input pane. The recognized text is inserted into the textarea just
-// like a normal paste would be, then runs through the exact same
-// convert()/fullConvert() pipeline as pasted HTML - OCR text has no tags,
-// and htmlToLines() already splits on real newlines, so no separate parsing
-// path is needed.
-const ocrOverlay = document.getElementById("ocrOverlay");
-const ocrStatus = document.getElementById("ocrStatus");
-const inputPaneBody = document.getElementById("inputPaneBody");
-let ocrBusy = false;
-
-function insertAtCursor(el, text){
-  const start = (el.selectionStart != null) ? el.selectionStart : el.value.length;
-  const end = (el.selectionEnd != null) ? el.selectionEnd : el.value.length;
-  const before = el.value.slice(0, start);
-  const after = el.value.slice(end);
-  el.value = before + text + after;
-  const newPos = start + text.length;
-  el.selectionStart = el.selectionEnd = newPos;
-}
-
-async function ocrImageToTextarea(fileOrBlob){
-  if(ocrBusy) return;
-  ocrBusy = true;
-  ocrOverlay.classList.add("visible");
-  ocrStatus.textContent = "Preparing image…";
-  ocrLogger = (m) => {
-    if(m.status === "recognizing text" && typeof m.progress === "number"){
-      ocrStatus.textContent = "Reading screenshot… " + Math.round(m.progress * 100) + "%";
-    } else if(m.status && m.status.indexOf("loading language") === 0){
-      ocrStatus.textContent = "Loading language data (first time only)…";
-    } else if(m.status){
-      ocrStatus.textContent = m.status.charAt(0).toUpperCase() + m.status.slice(1) + "…";
+  if(node === lineEl){
+    let count = 0;
+    for(let i=0; i<offset && i<lineEl.childNodes.length; i++){
+      const c = lineEl.childNodes[i];
+      if(c.nodeType === Node.TEXT_NODE) count += c.textContent.length;
     }
-  };
-  try{
-    if(typeof Tesseract === "undefined"){
-      throw new Error("OCR engine unavailable");
-    }
-    const processed = await preprocessForOcr(fileOrBlob).catch(() => fileOrBlob);
-    const worker = await getOcrWorker();
-    const { data } = await worker.recognize(processed);
-    let text = (data && data.text) ? data.text : "";
-    text = text.replace(/\r\n/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/\s+$/,"");
-    if(!text.trim()){
-      ocrStatus.textContent = "Couldn't find any text in that image.";
-      setTimeout(() => ocrOverlay.classList.remove("visible"), 1500);
-      return;
-    }
-    const sep = inputEl.value.trim() ? "\n" : "";
-    insertAtCursor(inputEl, sep + text + "\n");
-    fullConvert();
-  }catch(err){
-    ocrStatus.textContent = "OCR failed — try pasting the text instead.";
-    setTimeout(() => ocrOverlay.classList.remove("visible"), 1800);
-    ocrBusy = false;
-    return;
+    return count;
   }
-  ocrOverlay.classList.remove("visible");
-  ocrBusy = false;
-}
 
-// Image paste: textareas still receive clipboardData with image items even
-// though they only render plain text, so we intercept those before the
-// browser's default (no-op) paste handling and route them to OCR. Plain
-// text pastes fall through untouched.
-inputEl.addEventListener("paste", (e) => {
-  const items = e.clipboardData && e.clipboardData.items;
-  if(!items) return;
-  for(const item of items){
-    if(item.type && item.type.indexOf("image/") === 0){
-      e.preventDefault();
-      const file = item.getAsFile();
-      if(file) ocrImageToTextarea(file);
-      return;
+  let count = 0;
+  for(const child of lineEl.childNodes){
+    if(child === node){
+      if(child.nodeType === Node.TEXT_NODE) count += offset;
+      return count;
+    }
+    if(child.nodeType === Node.TEXT_NODE){
+      count += child.textContent.length;
+    } else if(child.nodeType === Node.ELEMENT_NODE){
+      if(child.contains(node)) return count; // landed inside a badge - snap before it
     }
   }
-});
-
-// Drag-and-drop an image file onto the input pane.
-["dragover","dragenter"].forEach(evt => inputPaneBody.addEventListener(evt, (e) => {
-  const dt = e.dataTransfer;
-  const hasImage = dt && Array.from(dt.items || []).some(it => it.type && it.type.indexOf("image/") === 0);
-  if(hasImage){
-    e.preventDefault();
-    inputPaneBody.classList.add("drag-over");
-  }
-}));
-["dragleave","dragend"].forEach(evt => inputPaneBody.addEventListener(evt, () => {
-  inputPaneBody.classList.remove("drag-over");
-}));
-inputPaneBody.addEventListener("drop", (e) => {
-  const files = e.dataTransfer && e.dataTransfer.files;
-  const imgFile = files && Array.from(files).find(f => f.type && f.type.indexOf("image/") === 0);
-  if(imgFile){
-    e.preventDefault();
-    inputPaneBody.classList.remove("drag-over");
-    ocrImageToTextarea(imgFile);
-  }
-});
-
-// "Upload photo" button: opens the device's photo picker (gallery or
-// camera on mobile) since paste/drag-and-drop of images isn't practical
-// on touch devices. Routes the chosen file through the same OCR pipeline.
-const uploadBtn = document.getElementById("uploadBtn");
-const uploadInput = document.getElementById("uploadInput");
-uploadBtn.addEventListener("click", () => uploadInput.click());
-uploadInput.addEventListener("change", () => {
-  const file = uploadInput.files && uploadInput.files[0];
-  if(file) ocrImageToTextarea(file);
-  uploadInput.value = "";
-});
+  return count; // point was past the last child
+}
 
 // --- Wiring ---
 
@@ -992,8 +930,30 @@ perfKeyEl.addEventListener("input", rebuildHeaderFooter);
 capoLineEl.addEventListener("input", rebuildHeaderFooter);
 videoIdEl.addEventListener("input", rebuildHeaderFooter);
 
-// Click a chord badge to select/deselect it; click elsewhere to deselect.
+// Direct edits in the output pane: delete a space, add a line break (Enter
+// naturally splits a .line div into two), or type "[G]" by hand to add a
+// chord. Debounced, DOM-safe sync only - never rebuilds the output's own
+// markup mid-typing, so the caret stays put.
+let outputDebounce;
+outputEl.addEventListener("input", () => {
+  if(suppressNextInput){ suppressNextInput = false; return; }
+  clearTimeout(outputDebounce);
+  outputDebounce = setTimeout(syncStateFromOutputDom, 150);
+});
+
+// Reformat nicely (recolor chord badges, recompute flagged-line borders)
+// once the user's done editing a stretch of text.
+outputEl.addEventListener("blur", () => {
+  syncStateFromOutputDom();
+  renderOutput();
+});
+
+// Click a chord badge to select/deselect it and open the nudge toolbar;
+// click anywhere else in the text and normal editing (caret placement)
+// takes over, with just a background state sync so nudge/copy/flags stay
+// current even before the field blurs.
 outputEl.addEventListener("click", (e) => {
+  syncStateFromOutputDom();
   const badge = e.target.closest(".chord-badge");
   if(badge){
     const lineIndex = parseInt(badge.dataset.line, 10);
@@ -1006,7 +966,7 @@ outputEl.addEventListener("click", (e) => {
     renderOutput();
   } else if(state.selected){
     state.selected = null;
-    renderOutput();
+    updateToolbar();
   }
 });
 
@@ -1014,6 +974,7 @@ outputEl.addEventListener("click", (e) => {
 nudgeToolbar.addEventListener("click", (e) => {
   const btn = e.target.closest("button");
   if(!btn || !state.selected) return;
+  syncStateFromOutputDom();
   if(btn.dataset.action === "deselect"){
     state.selected = null;
     renderOutput();
@@ -1022,7 +983,9 @@ nudgeToolbar.addEventListener("click", (e) => {
   nudgeChord(state.selected.lineIndex, state.selected.chordId, parseInt(btn.dataset.dir, 10), btn.dataset.action);
 });
 
-// Arrow-key nudging while a chord is selected (Shift = by word).
+// Arrow-key nudging while a chord badge is selected (Shift = by word).
+// Only hijacks arrow keys when a badge is actually selected, so normal
+// text-cursor navigation while editing is untouched.
 document.addEventListener("keydown", (e) => {
   if(!state.selected) return;
   const tag = document.activeElement && document.activeElement.tagName;
@@ -1036,11 +999,82 @@ document.addEventListener("keydown", (e) => {
     nudgeChord(state.selected.lineIndex, state.selected.chordId, 1, e.shiftKey ? "word" : "letter");
   } else if(e.key === "Escape"){
     state.selected = null;
-    renderOutput();
+    updateToolbar();
   }
 });
 
+// --- Dragging chord badges ---
+// Badges are draggable="true" (and contenteditable="false", so native drag
+// initiation doesn't fight text-selection dragging in the surrounding
+// contenteditable region). Dropping on any line - the same one or a
+// different one - moves that chord to the pointer's character position,
+// snapped the same way clicking/typing would place it.
+
+outputEl.addEventListener("dragstart", (e) => {
+  const badge = e.target.closest(".chord-badge");
+  if(!badge){ e.preventDefault(); return; }
+  syncStateFromOutputDom();
+  dragInfo = {
+    lineIndex: parseInt(badge.dataset.line, 10),
+    chordId: parseInt(badge.dataset.id, 10)
+  };
+  badge.classList.add("dragging");
+  e.dataTransfer.effectAllowed = "move";
+  try{ e.dataTransfer.setData("text/plain", ""); }catch(err){}
+});
+
+outputEl.addEventListener("dragover", (e) => {
+  if(!dragInfo) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  document.querySelectorAll("#output .line.drop-target").forEach(el => el.classList.remove("drop-target"));
+  const lineEl = e.target.closest(".line");
+  if(lineEl) lineEl.classList.add("drop-target");
+});
+
+outputEl.addEventListener("dragleave", (e) => {
+  const lineEl = e.target.closest(".line");
+  if(lineEl) lineEl.classList.remove("drop-target");
+});
+
+outputEl.addEventListener("drop", (e) => {
+  if(!dragInfo) return;
+  e.preventDefault();
+  const info = dragInfo;
+  dragInfo = null;
+  document.querySelectorAll("#output .line.drop-target").forEach(el => el.classList.remove("drop-target"));
+
+  syncStateFromOutputDom();
+
+  const targetLineEl = e.target.closest(".line");
+  if(!targetLineEl){ renderOutput(); return; }
+  const targetLineIndex = parseInt(targetLineEl.dataset.lineIndex, 10);
+  const sourceEntry = state.lines[info.lineIndex];
+  const targetEntry = state.lines[targetLineIndex];
+  if(!sourceEntry || !targetEntry){ renderOutput(); return; }
+
+  const chordIdx = sourceEntry.chords.findIndex(c => c.id === info.chordId);
+  if(chordIdx === -1){ renderOutput(); return; }
+  const [chordObj] = sourceEntry.chords.splice(chordIdx, 1);
+
+  let pos = charIndexFromPoint(targetLineEl, e.clientX, e.clientY);
+  if(pos === -1) pos = targetEntry.chars.length;
+  pos = Math.max(0, Math.min(targetEntry.chars.length, pos));
+  chordObj.pos = pos;
+  targetEntry.chords.push(chordObj);
+
+  state.selected = {lineIndex: targetLineIndex, chordId: chordObj.id};
+  renderOutput();
+});
+
+outputEl.addEventListener("dragend", () => {
+  dragInfo = null;
+  document.querySelectorAll("#output .chord-badge.dragging").forEach(el => el.classList.remove("dragging"));
+  document.querySelectorAll("#output .line.drop-target").forEach(el => el.classList.remove("drop-target"));
+});
+
 copyBtn.addEventListener("click", async () => {
+  syncStateFromOutputDom();
   if(!currentRawOutput) return;
   try{
     await navigator.clipboard.writeText(currentRawOutput);
