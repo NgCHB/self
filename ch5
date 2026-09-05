@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chord Sheet Converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFFFFF;
+    --panel:#F7F6F3;
+    --panel-2:#F0EFEA;
+    --ink:#211F26;
+    --ink-dim:#6B6659;
+    --hairline:rgba(33,31,38,0.12);
+    --gold:#A6791E;
+    --wine:#A14A63;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+  }
+  header{
+    padding:28px clamp(16px,4vw,48px) 18px;
+    border-bottom:1px solid var(--hairline);
+  }
+  header h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:clamp(24px,3vw,32px);
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  header h1 span{ color:var(--gold); }
+  header p{
+    margin:0;
+    color:var(--ink-dim);
+    font-size:14px;
+    max-width:64ch;
+  }
+  .controls{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
+    padding:14px clamp(16px,4vw,48px);
+    border-bottom:1px solid var(--hairline);
+    background:var(--panel-2);
+  }
+  .controls label{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-dim);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .controls input[type="number"]{
+    width:64px;
+    background:var(--bg);
+    border:1px solid var(--hairline);
+    color:var(--ink);
+    border-radius:6px;
+    padding:5px 8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+  }
+  .controls input[type="number"]:focus-visible,
+  .controls-row input[type="text"]:focus-visible,
+  textarea:focus-visible,
+  button:focus-visible,
+  .chord-badge:focus-visible,
+  #output:focus-visible{
+    outline:2px solid var(--gold);
+    outline-offset:2px;
+  }
+  .controls-row input[type="text"]{
+    background:var(--bg);
+    border:1px solid var(--hairline);
+    color:var(--ink);
+    border-radius:6px;
+    padding:5px 8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+  }
+  .controls-row{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
+    padding:12px clamp(16px,4vw,48px);
+    border-bottom:1px solid var(--hairline);
+    background:var(--panel-2);
+  }
+  .controls-row label{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-dim);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .flag-badge{
+    font-size:12px;
+    color:var(--wine);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-left:auto;
+  }
+  .flag-badge .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--wine);
+    display:inline-block;
+  }
+
+  /* --- Undo/redo/save/reset toolbar --- */
+  .action-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    padding:10px clamp(16px,4vw,48px);
+    border-bottom:1px solid var(--hairline);
+    background:var(--bg);
+  }
+  .toolbar-btn{
+    background:var(--bg);
+    border:1px solid var(--hairline);
+    color:var(--ink);
+    padding:6px 14px;
+    border-radius:20px;
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    font-weight:500;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    transition:border-color .15s, color .15s, opacity .15s;
+  }
+  .toolbar-btn:hover:not(:disabled){
+    border-color:var(--gold);
+    color:var(--gold);
+  }
+  .toolbar-btn:disabled{
+    opacity:0.35;
+    cursor:not-allowed;
+  }
+  .toolbar-btn.danger:hover:not(:disabled){
+    border-color:var(--wine);
+    color:var(--wine);
+  }
+  .action-sep{
+    width:1px;
+    height:18px;
+    background:var(--hairline);
+    margin:0 4px;
+  }
+  .save-status{
+    font-size:11px;
+    color:var(--ink-dim);
+    margin-right:auto;
+    font-style:italic;
+  }
+
+  main{
+    flex:1;
+    display:flex;
+    flex-direction:row;
+    gap:1px;
+    background:var(--hairline);
+    min-height:0;
+  }
+  .pane{
+    background:var(--bg);
+    display:flex;
+    flex-direction:column;
+    flex:1;
+    min-width:0;
+    min-height:0;
+    overflow:hidden;
+  }
+  .pane-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 20px;
+    border-bottom:1px solid var(--hairline);
+  }
+  .pane-head h2{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    font-weight:600;
+    color:var(--ink-dim);
+    margin:0;
+  }
+  .pane-body{
+    flex:1;
+    position:relative;
+    min-height:420px;
+    overflow:hidden;
+  }
+  textarea{
+    width:100%;
+    height:100%;
+    resize:none;
+    border:none;
+    background:transparent;
+    color:var(--ink);
+    font-family:'JetBrains Mono',monospace;
+    font-size:13.5px;
+    line-height:1.7;
+    padding:20px;
+    white-space:pre;
+    overflow:auto;
+    display:block;
+  }
+
+  /* --- Nudge toolbar --- */
+  .nudge-toolbar{
+    display:none;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+    padding:10px 20px;
+    background:var(--panel-2);
+    border-bottom:1px solid var(--hairline);
+    font-family:'Inter',sans-serif;
+  }
+  .nudge-toolbar.visible{ display:flex; }
+  .nudge-label{
+    font-size:12px;
+    color:var(--ink-dim);
+  }
+  .nudge-label b{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--gold);
+    font-size:13px;
+  }
+  .nudge-btns{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .nudge-btns button{
+    background:var(--bg);
+    border:1px solid var(--hairline);
+    color:var(--ink);
+    width:30px;
+    height:28px;
+    border-radius:6px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:14px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:border-color .15s, color .15s;
+  }
+  .nudge-btns button:hover{
+    border-color:var(--gold);
+    color:var(--gold);
+  }
+  .nudge-btns button[data-action="deselect"]{
+    color:var(--wine);
+    margin-left:4px;
+  }
+  .nudge-btns button[data-action="deselect"]:hover{
+    border-color:var(--wine);
+  }
+  .nudge-hint{
+    font-size:11px;
+    color:var(--ink-dim);
+    margin-left:auto;
+  }
+
+  #output{
+    position:absolute;
+    inset:0;
+    padding:20px;
+    overflow:auto;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13.5px;
+    line-height:1.9;
+  }
+  #output[contenteditable="true"]{
+    cursor:text;
+  }
+  #output .line{
+    white-space:pre-wrap;
+    padding:2px 10px 2px 12px;
+    border-left:2px solid transparent;
+    border-radius:3px;
+  }
+  #output .line.flagged{
+    border-left-color:var(--wine);
+    background:rgba(181,99,122,0.08);
+  }
+  #output .line.flagged::after{
+    content:"review";
+    float:right;
+    font-size:10px;
+    color:var(--wine);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    font-family:'Inter',sans-serif;
+  }
+  #output .line.drop-target{
+    background:rgba(166,121,30,0.08);
+    border-left-color:var(--gold);
+  }
+  #output .chord-badge{
+    position:relative;
+    color:var(--gold);
+    font-weight:600;
+    cursor:grab;
+    border:1px solid transparent;
+    border-radius:4px;
+    padding:0 1px;
+    user-select:none;
+  }
+  /* Invisible padding so the badge is much easier to hit than its visible
+     text - purely absolute-positioned, so it never nudges surrounding
+     layout or chord alignment. */
+  #output .chord-badge::before{
+    content:"";
+    position:absolute;
+    inset:-6px -4px;
+  }
+  #output .chord-badge:active{
+    cursor:grabbing;
+  }
+  #output .chord-badge:hover{
+    background:rgba(166,121,30,0.14);
+    border-color:rgba(166,121,30,0.35);
+  }
+  #output .chord-badge.selected{
+    background:var(--wine);
+    color:#fff;
+    border-color:var(--wine);
+  }
+  #output .chord-badge.dragging{
+    opacity:0.35;
+  }
+  #output .meta{ color:var(--ink-dim); }
+  #output .placeholder{
+    color:var(--ink-dim);
+    font-family:'Inter',sans-serif;
+    font-style:italic;
+    font-size:14px;
+  }
+  button.copy-btn{
+    background:transparent;
+    border:1px solid var(--hairline);
+    color:var(--ink);
+    padding:6px 14px;
+    border-radius:20px;
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    font-weight:500;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    transition:border-color .15s, color .15s;
+  }
+  button.copy-btn:hover{
+    border-color:var(--gold);
+    color:var(--gold);
+  }
+  button.copy-btn.copied{
+    border-color:var(--gold);
+    color:var(--gold);
+    background:rgba(212,166,58,0.1);
+  }
+  ::selection{ background:rgba(212,166,58,0.25); }
+
+  @media (max-width: 860px){
+    body{ overflow-x:hidden; }
+    main{ flex-direction:column; }
+    .pane{ flex:none; height:46vh; }
+    .pane-body{ min-height:0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Chord Sheet <span>Converter</span></h1>
+  <p>Paste legacy chord-over-lyric HTML on the left. Get inline <code>[Chord]lyric</code> notation, ready for <code>.chord-sheet</code>, on the right. Click a chord badge to select it and nudge it by letter or word, drag a badge to drop it somewhere new, or click straight into the text to edit it directly: delete spaces, add line breaks, or type a new chord as <code>[Chord]</code>.</p>
+</header>
+
+<div class="controls">
+  <label>CJK width
+    <input type="number" id="cjkWidth" value="2.6" step="0.1" min="1" max="4">
+  </label>
+  <span style="font-size:12px;color:var(--ink-dim);">tune if chords land a syllable early/late — or just click a chord and nudge it</span>
+  <div class="flag-badge" id="flagBadge" style="display:none;">
+    <span class="dot"></span><span id="flagCount">0</span> line(s) flagged for review
+  </div>
+</div>
+
+<div class="controls-row">
+  <label>Performance key
+    <input type="text" id="perfKey" placeholder="e.g. E" size="4">
+  </label>
+  <label>Capo line
+    <input type="text" id="capoLine" placeholder="e.g. 4 - Play C" size="16">
+  </label>
+  <label>YouTube video ID or URL
+    <input type="text" id="videoId" placeholder="e.g. GaMS0F0_xMI" size="22">
+  </label>
+  <span style="font-size:12px;color:var(--ink-dim);">leave any field blank to skip that block</span>
+</div>
+
+<div class="action-row">
+  <button type="button" class="toolbar-btn" id="undoBtn" title="Undo (Ctrl+Z)">&#8630; Undo</button>
+  <button type="button" class="toolbar-btn" id="redoBtn" title="Redo (Ctrl+Shift+Z)">&#8631; Redo</button>
+  <span class="action-sep"></span>
+  <button type="button" class="toolbar-btn" id="saveBtn" title="Save everything to this browser">&#128190; Save</button>
+  <span class="save-status" id="saveStatus"></span>
+  <button type="button" class="toolbar-btn danger" id="resetBtn" title="Clear everything and start fresh">&#8635; Reset</button>
+</div>
+
+<main>
+  <div class="pane">
+    <div class="pane-head">
+      <h2>Legacy HTML</h2>
+    </div>
+    <div class="pane-body">
+      <textarea id="input" placeholder="Paste your exported <p>/<br> chord sheet HTML here…" spellcheck="false"></textarea>
+    </div>
+  </div>
+
+  <div class="pane">
+    <div class="pane-head">
+      <h2>Converted output</h2>
+      <button class="copy-btn" id="copyBtn">
+        <span id="copyLabel">Copy</span>
+      </button>
+    </div>
+    <div class="nudge-toolbar" id="nudgeToolbar">
+      <span class="nudge-label">Selected: <b id="nudgeChordName"></b></span>
+      <div class="nudge-btns">
+        <button type="button" data-action="word" data-dir="-1" title="Move a word left">&laquo;</button>
+        <button type="button" data-action="letter" data-dir="-1" title="Move a letter left">&lsaquo;</button>
+        <button type="button" data-action="letter" data-dir="1" title="Move a letter right">&rsaquo;</button>
+        <button type="button" data-action="word" data-dir="1" title="Move a word right">&raquo;</button>
+        <button type="button" data-action="deselect" title="Deselect (Esc)">&times;</button>
+      </div>
+      <span class="nudge-hint">&larr;/&rarr; = letter &middot; Shift+&larr;/&rarr; = word &middot; drag a badge to move it</span>
+    </div>
+    <div class="pane-body">
+      <div id="output" spellcheck="false"><div class="placeholder">Converted chord-sheet HTML will appear here.</div></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const CHORD_TOKEN = "[A-G](?:#|b)?(?:maj7|maj|min7|min|m7|m|sus2|sus4|sus|dim7|dim|aug|add\\d)?\\d*(?:\\/[A-G](?:#|b)?)?";
+const CHORD_LINE_RE = new RegExp("^[\\s*]*(?:" + CHORD_TOKEN + ")(?:[\\s*]+(?:" + CHORD_TOKEN + "))*[\\s*]*$");
+
+function findChords(line){
+  const re = new RegExp(CHORD_TOKEN, "g");
+  const out = [];
+  let m;
+  while((m = re.exec(line)) !== null){
+    out.push({chord:m[0], start:m.index});
+    if(re.lastIndex === m.index) re.lastIndex++;
+  }
+  return out;
+}
+
+function decodeHtmlEntities(str){
+  const ta = document.createElement("textarea");
+  ta.innerHTML = str;
+  return ta.value;
+}
+
+function htmlToLines(html){
+  let text = html.replace(/<br\s*\/?>/gi, "\n");
+  text = text.replace(/<\/p>/gi, "\n");
+  text = text.replace(/<iframe[\s\S]*?<\/iframe>/gi, "");
+  text = text.replace(/<[^>]+>/g, "");
+  text = decodeHtmlEntities(text);
+  text = text.replace(/\u00A0/g, " ");
+  return text.split("\n").filter(l => l.trim() !== "");
+}
+
+function isChordLine(line){
+  const s = line.trim();
+  if(!s) return false;
+  return CHORD_LINE_RE.test(s) && findChords(s).length > 0;
+}
+
+function cwidth(ch, cjkWidth){
+  return ch.codePointAt(0) > 0x2E80 ? cjkWidth : 1;
+}
+
+function escapeHtml(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+let nextChordId = 1;
+
+function computeWordStarts(chars){
+  const wordStarts = [];
+  for(let i=0;i<chars.length;i++){
+    if(i===0 ? !/\s/.test(chars[0]) : (/\s/.test(chars[i-1]) && !/\s/.test(chars[i]))) wordStarts.push(i);
+  }
+  if(wordStarts.length === 0) wordStarts.push(0);
+  return wordStarts;
+}
+
+function mergeLine(chordLine, lyricLine, cjkWidth){
+  const chords = findChords(chordLine);
+  const chars = Array.from(lyricLine);
+  const wordStarts = computeWordStarts(chars);
+
+  if(chords.length === 0){
+    return {chars, wordStarts, chords: [], flagged:false};
+  }
+  if(chars.length === 0){
+    return {chars, wordStarts, chords: chords.map(c => ({id: nextChordId++, chord:c.chord, pos:0})), flagged:false};
+  }
+
+  const cum = [0];
+  for(const ch of chars) cum.push(cum[cum.length-1] + cwidth(ch, cjkWidth));
+
+  const hasCJK = chars.some(ch => ch.codePointAt(0) > 0x2E80);
+
+  if(hasCJK){
+    // CJK sheets are usually spaced with one chord-line character per lyric
+    // character, so literal position matching is the right model here.
+    const assigned = [];
+    let ci = 0;
+    for(let idx=0; idx<chars.length; idx++){
+      while(ci < chords.length && chords[ci].start < cum[idx+1]){
+        assigned.push({id: nextChordId++, chord: chords[ci].chord, pos: idx});
+        ci++;
+      }
+    }
+    let flagged = false;
+    while(ci < chords.length){
+      assigned.push({id: nextChordId++, chord: chords[ci].chord, pos: chars.length});
+      ci++;
+      flagged = true;
+    }
+    return {chars, wordStarts, chords: assigned, flagged};
+  }
+
+  // Space-delimited (e.g. English) lyric lines: chord lines like this are
+  // almost always hand-spaced for a proportional font, so a chord's raw
+  // character index rarely lines up with the matching character index in
+  // the lyric line - and chords virtually always belong on a word's first
+  // letter rather than mid-word. So: map each chord by its fractional
+  // position along the chord line onto the same fraction of the lyric
+  // line's width, then snap that position to the nearest word start.
+  const chordChars = Array.from(chordLine);
+  const chordCum = [0];
+  for(const ch of chordChars) chordCum.push(chordCum[chordCum.length-1] + cwidth(ch, cjkWidth));
+  const chordLineWidth = chordCum[chordCum.length-1] || 1;
+  const lyricLineWidth = cum[cum.length-1];
+
+  const assigned = [];
+  const seenPos = new Map();
+  let flagged = false;
+  for(const c of chords){
+    const target = (chordCum[c.start] / chordLineWidth) * lyricLineWidth;
+    let best = wordStarts[0];
+    let bestDist = Math.abs(cum[best] - target);
+    for(const ws of wordStarts){
+      const d = Math.abs(cum[ws] - target);
+      if(d < bestDist){ bestDist = d; best = ws; }
+    }
+    assigned.push({id: nextChordId++, chord: c.chord, pos: best});
+    seenPos.set(best, (seenPos.get(best) || 0) + 1);
+    if(seenPos.get(best) > 1) flagged = true;
+  }
+  return {chars, wordStarts, chords: assigned, flagged};
+}
+
+const KEY_LINE_RE = /^key\s*:/i;
+const CAPO_LINE_RE = /^capo\b/i;
+
+// The first non-chord line of a pasted sheet is treated as the composer /
+// lyricist credit line. It's pulled out of the body entirely and folded
+// into the header block (alongside Key / Capo) instead of being rendered
+// inside .chord-sheet. Each body line keeps its lyric characters, word-start
+// positions, and chords as structured data (rather than a flat merged
+// string) so chords can be nudged after the fact - the CJK-width slider
+// rarely gets every chord exactly right, and mis-landed ones can be moved
+// by hand, or the line can just be edited directly in the output.
+function convert(html, cjkWidth){
+  const lines = htmlToLines(html);
+  const results = [];
+  let i = 0;
+  let composerLine = "";
+  if(lines.length > 0 && !isChordLine(lines[0])){
+    composerLine = lines[0];
+    i = 1;
+  }
+  while(i < lines.length){
+    const line = lines[i];
+    let entry;
+    if(isChordLine(line) && i+1 < lines.length && !isChordLine(lines[i+1])){
+      entry = mergeLine(line, lines[i+1], cjkWidth);
+      i += 2;
+    } else if(isChordLine(line)){
+      const chords = findChords(line).map(c => ({id: nextChordId++, chord:c.chord, pos:0}));
+      entry = {chars: [], wordStarts:[0], chords, flagged: chords.length > 0};
+      i += 1;
+    } else if(KEY_LINE_RE.test(line.trim()) || CAPO_LINE_RE.test(line.trim())){
+      i += 1;
+      continue;
+    } else {
+      entry = {chars: Array.from(line), wordStarts: computeWordStarts(Array.from(line)), chords: [], flagged:false};
+      i += 1;
+    }
+    results.push(entry);
+  }
+  return {composerLine: escapeHtml(composerLine), lines: results};
+}
+
+// Parses a raw "[Chord]lyric" line (whether it came from auto-conversion or
+// was typed/edited by hand directly in the output pane) back into the
+// {chars, wordStarts, chords, flagged} shape used everywhere else. Because
+// this is driven purely off the visible "[...]" bracket text, a chord the
+// user types by hand is treated exactly the same as one placed automatically.
+function parseBodyLine(line){
+  const chars = [];
+  const chords = [];
+  let i = 0;
+  while(i < line.length){
+    if(line[i] === "["){
+      const end = line.indexOf("]", i);
+      if(end !== -1){
+        const chordName = line.slice(i+1, end);
+        chords.push({id: nextChordId++, chord: chordName, pos: chars.length});
+        i = end + 1;
+        continue;
+      }
+    }
+    chars.push(line[i]);
+    i++;
+  }
+  const wordStarts = computeWordStarts(chars);
+  const seenPos = new Set();
+  let flagged = false;
+  chords.forEach(c => {
+    if(seenPos.has(c.pos)) flagged = true;
+    seenPos.add(c.pos);
+  });
+  return {chars, wordStarts, chords, flagged};
+}
+
+function parseBodyText(text){
+  return text.split("\n").map(parseBodyLine);
+}
+
+const inputEl = document.getElementById("input");
+const outputEl = document.getElementById("output");
+const cjkWidthEl = document.getElementById("cjkWidth");
+const flagBadge = document.getElementById("flagBadge");
+const flagCount = document.getElementById("flagCount");
+const copyBtn = document.getElementById("copyBtn");
+const copyLabel = document.getElementById("copyLabel");
+const perfKeyEl = document.getElementById("perfKey");
+const capoLineEl = document.getElementById("capoLine");
+const videoIdEl = document.getElementById("videoId");
+const nudgeToolbar = document.getElementById("nudgeToolbar");
+const nudgeChordNameEl = document.getElementById("nudgeChordName");
+const undoBtn = document.getElementById("undoBtn");
+const redoBtn = document.getElementById("redoBtn");
+const saveBtn = document.getElementById("saveBtn");
+const resetBtn = document.getElementById("resetBtn");
+const saveStatusEl = document.getElementById("saveStatus");
+
+function extractYoutubeId(rawHtml){
+  const m = rawHtml.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/)
+        || rawHtml.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/)
+        || rawHtml.match(/[?&]v=([A-Za-z0-9_-]{6,})/);
+  return m ? m[1] : "";
+}
+
+function resolveVideoId(value){
+  const v = value.trim();
+  if(!v) return "";
+  // accept a bare ID, a full URL, or a mangled markdown-style paste
+  const m = v.match(/embed\/([A-Za-z0-9_-]{6,})/) || v.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/)
+        || v.match(/[?&]v=([A-Za-z0-9_-]{6,})/);
+  if(m) return m[1];
+  return v; // assume they typed a bare video ID
+}
+
+// Composer credit (auto-extracted from the pasted sheet) + Key + Capo,
+// all folded into one bold block placed just before <div class="chord-sheet">.
+function buildHeaderBlock(composer, key, capo){
+  const c = (composer || "").trim();
+  const k = key.trim();
+  if(!c && !k) return "";
+  let inner = "";
+  if(c) inner += c;
+  if(k){
+    if(c) inner += "<br><br>";
+    inner += "Key: " + k;
+    if(capo.trim()) inner += "<br>" + capo.trim();
+  }
+  return "<br><b>" + inner + "</b><br><br>";
+}
+
+function buildFooterBlock(videoField){
+  const id = resolveVideoId(videoField);
+  if(!id) return "";
+  return "<br>\n<div class=\"video-container\">\n  <iframe src=\"https://www.youtube.com/embed/" + id + "\" title=\"YouTube video player\"\n    frameborder=\"0\"\n    allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\"\n    allowfullscreen>\n  </iframe>\n</div>";
+}
+
+// --- App state ---
+// state.lines holds the *editable* chord/lyric structure produced by
+// convert() (or reparsed straight off the output pane's own text via
+// parseBodyText()). Nudging a chord, dragging a chord, or typing/deleting
+// directly in the output, only ever mutates this structure (or is read back
+// into it) and re-renders - it never re-runs convert(), so manual fixes
+// survive edits to unrelated fields (key, capo, video).
+let state = { composerLine: "", headerBlock: "", footerBlock: "", lines: [], selected: null };
+let currentRawOutput = "";
+let suppressNextInput = false; // guards against our own re-renders firing the input listener
+let dragInfo = null; // {lineIndex, chordId} of the badge currently being dragged
+
+// --- Undo / redo / save / reset ---
+// History is a stack of full app snapshots (pasted HTML + settings fields +
+// the editable chord/lyric structure). Every content-changing action pushes
+// a new snapshot; Undo/Redo just walk the stack and restore one wholesale.
+// "Save" persists the current snapshot to this browser's localStorage so it
+// survives a page reload; "Reset" wipes everything (including that saved
+// copy) back to a blank slate.
+const STORAGE_KEY = "chordSheetConverterSave_v1";
+const HISTORY_LIMIT = 100;
+let historyStack = [];
+let historyIndex = -1;
+let isRestoring = false; // true while restoreSnapshot() is applying a snapshot, so that doesn't itself get recorded as a new history entry
+
+function snapshot(){
+  return {
+    inputValue: inputEl.value,
+    cjkWidth: cjkWidthEl.value,
+    perfKey: perfKeyEl.value,
+    capoLine: capoLineEl.value,
+    videoId: videoIdEl.value,
+    composerLine: state.composerLine,
+    headerBlock: state.headerBlock,
+    footerBlock: state.footerBlock,
+    lines: JSON.parse(JSON.stringify(state.lines)),
+    nextChordId: nextChordId
+  };
+}
+
+function pushHistory(){
+  if(isRestoring) return;
+  const snap = snapshot();
+  const last = historyStack[historyIndex];
+  if(last && JSON.stringify(last) === JSON.stringify(snap)){
+    updateUndoRedoButtons();
+    return;
+  }
+  historyStack = historyStack.slice(0, historyIndex + 1);
+  historyStack.push(snap);
+  if(historyStack.length > HISTORY_LIMIT){
+    historyStack.shift();
+  }
+  historyIndex = historyStack.length - 1;
+  updateUndoRedoButtons();
+}
+
+function restoreSnapshot(snap){
+  isRestoring = true;
+  inputEl.value = snap.inputValue || "";
+  cjkWidthEl.value = snap.cjkWidth || "2.6";
+  perfKeyEl.value = snap.perfKey || "";
+  capoLineEl.value = snap.capoLine || "";
+  videoIdEl.value = snap.videoId || "";
+  state.composerLine = snap.composerLine || "";
+  state.headerBlock = snap.headerBlock || "";
+  state.footerBlock = snap.footerBlock || "";
+  state.lines = JSON.parse(JSON.stringify(snap.lines || []));
+  state.selected = null;
+  nextChordId = snap.nextChordId || 1;
+  renderOutput();
+  isRestoring = false;
+  updateUndoRedoButtons();
+}
+
+function doUndo(){
+  if(historyIndex <= 0) return;
+  historyIndex--;
+  restoreSnapshot(historyStack[historyIndex]);
+}
+
+function doRedo(){
+  if(historyIndex >= historyStack.length - 1) return;
+  historyIndex++;
+  restoreSnapshot(historyStack[historyIndex]);
+}
+
+function updateUndoRedoButtons(){
+  undoBtn.disabled = historyIndex <= 0;
+  redoBtn.disabled = historyIndex >= historyStack.length - 1;
+}
+
+let saveStatusTimer;
+function showSaveStatus(msg){
+  saveStatusEl.textContent = msg;
+  clearTimeout(saveStatusTimer);
+  if(msg){
+    saveStatusTimer = setTimeout(() => { saveStatusEl.textContent = ""; }, 4000);
+  }
+}
+
+function saveToLocal(){
+  syncStateFromOutputDom();
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot()));
+    showSaveStatus("Saved to this browser just now");
+  }catch(err){
+    showSaveStatus("Couldn't save — local storage isn't available here");
+  }
+}
+
+function loadFromLocalStorageOnInit(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const snap = JSON.parse(raw);
+    if(snap && typeof snap === "object"){
+      restoreSnapshot(snap);
+      showSaveStatus("Restored your last saved session");
+    }
+  }catch(err){
+    // Corrupt or inaccessible storage - just start blank.
+  }
+}
+
+function resetAll(){
+  const proceed = window.confirm("Reset will clear everything you've entered, including any saved copy in this browser. This can't be undone once you save or navigate away. Continue?");
+  if(!proceed) return;
+  inputEl.value = "";
+  cjkWidthEl.value = "2.6";
+  perfKeyEl.value = "";
+  capoLineEl.value = "";
+  videoIdEl.value = "";
+  state = { composerLine: "", headerBlock: "", footerBlock: "", lines: [], selected: null };
+  nextChordId = 1;
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(err){ /* ignore */ }
+  renderOutput();
+  pushHistory();
+  showSaveStatus("Reset to a blank sheet");
+}
+
+function fullConvert(){
+  const html = inputEl.value;
+  if(!html.trim()){
+    state = { composerLine: "", headerBlock: "", footerBlock: "", lines: [], selected: null };
+    renderOutput();
+    pushHistory();
+    return;
+  }
+  const cjkWidth = parseFloat(cjkWidthEl.value) || 2.3;
+  const {composerLine, lines} = convert(html, cjkWidth);
+  state.composerLine = composerLine;
+  state.lines = lines;
+  state.selected = null;
+  state.headerBlock = buildHeaderBlock(state.composerLine, perfKeyEl.value, capoLineEl.value);
+  state.footerBlock = buildFooterBlock(videoIdEl.value);
+  renderOutput();
+  pushHistory();
+}
+
+// Rebuilds only the header/footer block (Key/Capo/video). Deliberately does
+// NOT touch state.lines, so any chords you've nudged or hand-edited stay put.
+function rebuildHeaderFooter(){
+  state.headerBlock = buildHeaderBlock(state.composerLine, perfKeyEl.value, capoLineEl.value);
+  state.footerBlock = buildFooterBlock(videoIdEl.value);
+  renderOutput();
+  pushHistory();
+}
+
+// Renders one line's inline "[Chord]lyric" text (used for the copy output).
+function buildLineString(entry){
+  const chords = entry.chords.slice().sort((a,b) => a.pos - b.pos);
+  let out = "";
+  let ci = 0;
+  for(let i=0; i<=entry.chars.length; i++){
+    while(ci < chords.length && chords[ci].pos === i){
+      out += "[" + chords[ci].chord + "]";
+      ci++;
+    }
+    if(i < entry.chars.length) out += entry.chars[i];
+  }
+  return out;
+}
+
+function buildBodyText(){
+  return state.lines.map(buildLineString).join("\n");
+}
+
+// Renders one line as clickable + draggable chord badges plus editable
+// lyric text.
+function buildLinePreviewHTML(entry, lineIndex){
+  const chords = entry.chords.slice().sort((a,b) => a.pos - b.pos);
+  let inner = "";
+  let ci = 0;
+  for(let i=0; i<=entry.chars.length; i++){
+    while(ci < chords.length && chords[ci].pos === i){
+      const c = chords[ci];
+      const sel = state.selected && state.selected.lineIndex === lineIndex && state.selected.chordId === c.id;
+      inner += `<span class="chord-badge${sel ? " selected" : ""}" contenteditable="false" data-line="${lineIndex}" data-id="${c.id}">[${escapeHtml(c.chord)}]</span>`;
+      ci++;
+    }
+    if(i < entry.chars.length) inner += escapeHtml(entry.chars[i]);
+  }
+  if(inner === "") inner = "<br>"; // keep empty lines selectable/editable
+  return `<div class="line${entry.flagged ? " flagged" : ""}" data-line-index="${lineIndex}">${inner}</div>`;
+}
+
+function updateToolbar(){
+  let selectedChord = null;
+  if(state.selected){
+    const entry = state.lines[state.selected.lineIndex];
+    selectedChord = entry && entry.chords.find(c => c.id === state.selected.chordId);
+  }
+  if(!selectedChord){
+    if(state.selected) state.selected = null;
+    nudgeToolbar.classList.remove("visible");
+    return;
+  }
+  nudgeToolbar.classList.add("visible");
+  nudgeChordNameEl.textContent = selectedChord.chord;
+}
+
+// Builds the full raw output (header + chord-sheet body + footer) from
+// current state, for the Copy button.
+function computeFullRawOutput(){
+  if(state.lines.length === 0 && !state.headerBlock && !state.footerBlock) return "";
+  let rawText = "";
+  if(state.headerBlock) rawText += state.headerBlock + "\n";
+  rawText += '<div class="chord-sheet">\n';
+  rawText += buildBodyText();
+  if(state.lines.length > 0) rawText += "\n";
+  rawText += '</div>';
+  if(state.footerBlock) rawText += state.footerBlock;
+  return rawText;
+}
+
+function hasContent(){
+  return state.lines.length > 0 || !!state.headerBlock || !!state.footerBlock;
+}
+
+// Rebuilds the whole output pane's DOM from state. Only call this when it's
+// safe to lose the caret position (initial conversion, nudges, drops, blur,
+// header/footer field changes) - never on every keystroke of direct typing,
+// or the cursor would jump around.
+function renderOutput(){
+  if(!hasContent()){
+    suppressNextInput = true;
+    outputEl.innerHTML = '<div class="placeholder">Converted chord-sheet HTML will appear here.</div>';
+    outputEl.contentEditable = "false";
+    flagBadge.style.display = "none";
+    currentRawOutput = "";
+    updateToolbar();
+    return;
+  }
+
+  let previewHtml = "";
+
+  if(state.headerBlock){
+    previewHtml += `<div class="meta" contenteditable="false">${escapeHtml(state.headerBlock)}</div>`;
+  }
+  previewHtml += '<div class="meta" contenteditable="false">&lt;div class="chord-sheet"&gt;</div>';
+
+  state.lines.forEach((entry, idx) => {
+    previewHtml += buildLinePreviewHTML(entry, idx);
+  });
+
+  previewHtml += '<div class="meta" contenteditable="false">&lt;/div&gt;</div>';
+
+  if(state.footerBlock){
+    previewHtml += `<div class="meta" contenteditable="false">${escapeHtml(state.footerBlock)}</div>`;
+  }
+
+  suppressNextInput = true;
+  outputEl.innerHTML = previewHtml;
+  outputEl.contentEditable = "true";
+  currentRawOutput = computeFullRawOutput();
+
+  updateFlagBadge();
+  updateToolbar();
+}
+
+function updateFlagBadge(){
+  const flagged = state.lines.reduce((n, e) => n + (e.flagged ? 1 : 0), 0);
+  if(flagged > 0){
+    flagBadge.style.display = "flex";
+    flagCount.textContent = flagged;
+  } else {
+    flagBadge.style.display = "none";
+  }
+}
+
+// Reads the output pane's own DOM back into state.lines, using each direct
+// child <div class="line"> element's textContent - which already reads as
+// "[Chord]lyric" whether the brackets came from an auto-placed badge or
+// were typed by hand. Non-.line children (the header/footer/tag preview,
+// which are contenteditable="false" and not meant to feed back into state)
+// are skipped. Does NOT touch the DOM, so it's safe to call on every
+// keystroke without disturbing the caret.
+//
+// Chord ids are preserved across the resync (matched by line + sorted
+// position) rather than left as the fresh ids parseBodyLine hands out.
+// Without this, every resync would silently orphan whatever id a rendered
+// badge's data-id was carrying - which is exactly what broke badge
+// selection: clicking a badge called this function first, it would mint a
+// brand new id for that same chord, and the click handler's lookup by the
+// badge's (now stale) data-id would fail every time.
+function syncStateFromOutputDom(){
+  if(!outputEl.isContentEditable && outputEl.contentEditable !== "true") return;
+  const lineEls = Array.from(outputEl.children).filter(el => el.classList.contains("line"));
+  if(lineEls.length === 0 && state.lines.length === 0) return;
+  const raw = lineEls.map(el => el.textContent).join("\n");
+  const newLines = parseBodyText(raw);
+
+  newLines.forEach((entry, li) => {
+    const oldEntry = state.lines[li];
+    if(!oldEntry) return;
+    const oldSorted = oldEntry.chords.slice().sort((a,b) => a.pos - b.pos);
+    const newSorted = entry.chords.slice().sort((a,b) => a.pos - b.pos);
+    for(let i=0; i<newSorted.length && i<oldSorted.length; i++){
+      newSorted[i].id = oldSorted[i].id;
+    }
+  });
+
+  state.lines = newLines;
+  currentRawOutput = computeFullRawOutput();
+  updateFlagBadge();
+}
+
+// Moves the selected chord. unit:'letter' shifts one character at a time;
+// unit:'word' jumps to the previous/next word start (or the very end of
+// the line). dir is -1 (left/earlier) or 1 (right/later).
+function nudgeChord(lineIndex, chordId, dir, unit){
+  const entry = state.lines[lineIndex];
+  if(!entry) return;
+  const chordObj = entry.chords.find(c => c.id === chordId);
+  if(!chordObj) return;
+
+  if(unit === "letter"){
+    chordObj.pos = Math.max(0, Math.min(entry.chars.length, chordObj.pos + dir));
+  } else {
+    const targets = Array.from(new Set([...entry.wordStarts, entry.chars.length])).sort((a,b) => a-b);
+    if(dir > 0){
+      const next = targets.find(t => t > chordObj.pos);
+      chordObj.pos = next !== undefined ? next : entry.chars.length;
+    } else {
+      const prevTargets = targets.filter(t => t < chordObj.pos);
+      chordObj.pos = prevTargets.length ? prevTargets[prevTargets.length - 1] : 0;
+    }
+  }
+  renderOutput();
+  pushHistory();
+}
+
+// Given a .line element and viewport coordinates (from a click or a drop),
+// returns the index into that line's `chars` array the point corresponds
+// to - i.e. the same "pos" numbering chords use (chars.length == end of
+// line). Badge spans contribute zero plain characters; landing inside one
+// counts as the boundary just before it.
+function charIndexFromPoint(lineEl, clientX, clientY){
+  let node = null, offset = 0;
+  if(document.caretRangeFromPoint){
+    const range = document.caretRangeFromPoint(clientX, clientY);
+    if(range){ node = range.startContainer; offset = range.startOffset; }
+  } else if(document.caretPositionFromPoint){
+    const pos = document.caretPositionFromPoint(clientX, clientY);
+    if(pos){ node = pos.offsetNode; offset = pos.offset; }
+  }
+  if(!node || !lineEl.contains(node)) return -1;
+
+  if(node === lineEl){
+    let count = 0;
+    for(let i=0; i<offset && i<lineEl.childNodes.length; i++){
+      const c = lineEl.childNodes[i];
+      if(c.nodeType === Node.TEXT_NODE) count += c.textContent.length;
+    }
+    return count;
+  }
+
+  let count = 0;
+  for(const child of lineEl.childNodes){
+    if(child === node){
+      if(child.nodeType === Node.TEXT_NODE) count += offset;
+      return count;
+    }
+    if(child.nodeType === Node.TEXT_NODE){
+      count += child.textContent.length;
+    } else if(child.nodeType === Node.ELEMENT_NODE){
+      if(child.contains(node)) return count; // landed inside a badge - snap before it
+    }
+  }
+  return count; // point was past the last child
+}
+
+// --- Wiring ---
+
+let debounceTimer;
+inputEl.addEventListener("input", () => {
+  if(!videoIdEl.value.trim()){
+    const found = extractYoutubeId(inputEl.value);
+    if(found) videoIdEl.value = found;
+  }
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(fullConvert, 120);
+});
+cjkWidthEl.addEventListener("input", fullConvert);
+perfKeyEl.addEventListener("input", rebuildHeaderFooter);
+capoLineEl.addEventListener("input", rebuildHeaderFooter);
+videoIdEl.addEventListener("input", rebuildHeaderFooter);
+
+// Direct edits in the output pane: delete a space, add a line break (Enter
+// naturally splits a .line div into two), or type "[G]" by hand to add a
+// chord. Debounced, DOM-safe sync only - never rebuilds the output's own
+// markup mid-typing, so the caret stays put. Each settled edit also gets
+// its own history entry, so undo can step back through hand edits too.
+let outputDebounce;
+outputEl.addEventListener("input", () => {
+  if(suppressNextInput){ suppressNextInput = false; return; }
+  clearTimeout(outputDebounce);
+  outputDebounce = setTimeout(() => {
+    syncStateFromOutputDom();
+    pushHistory();
+  }, 150);
+});
+
+// Reformat nicely (recolor chord badges, recompute flagged-line borders)
+// once the user's done editing a stretch of text.
+outputEl.addEventListener("blur", () => {
+  syncStateFromOutputDom();
+  renderOutput();
+  pushHistory();
+});
+
+// Badge selection is decided in the mousedown/mousemove/mouseup trio below
+// (so we can tell a real click apart from the start of a drag ourselves,
+// rather than relying on the browser's native click-vs-drag heuristics,
+// which is what made clicks miss so often). This click handler only
+// handles clicking elsewhere in the text: deselect, then let normal
+// contenteditable caret placement happen, with a background state sync so
+// nudge/copy/flags stay current even before the field blurs.
+outputEl.addEventListener("click", (e) => {
+  if(e.target.closest(".chord-badge")) return;
+  syncStateFromOutputDom();
+  if(state.selected){
+    state.selected = null;
+    updateToolbar();
+  }
+});
+
+// Toolbar buttons.
+nudgeToolbar.addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if(!btn || !state.selected) return;
+  syncStateFromOutputDom();
+  if(btn.dataset.action === "deselect"){
+    state.selected = null;
+    renderOutput();
+    return;
+  }
+  nudgeChord(state.selected.lineIndex, state.selected.chordId, parseInt(btn.dataset.dir, 10), btn.dataset.action);
+});
+
+// Arrow-key nudging while a chord badge is selected (Shift = by word).
+// Only hijacks arrow keys when a badge is actually selected, so normal
+// text-cursor navigation while editing is untouched.
+document.addEventListener("keydown", (e) => {
+  if(!state.selected) return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if(tag === "TEXTAREA" || tag === "INPUT") return;
+
+  if(e.key === "ArrowLeft"){
+    e.preventDefault();
+    nudgeChord(state.selected.lineIndex, state.selected.chordId, -1, e.shiftKey ? "word" : "letter");
+  } else if(e.key === "ArrowRight"){
+    e.preventDefault();
+    nudgeChord(state.selected.lineIndex, state.selected.chordId, 1, e.shiftKey ? "word" : "letter");
+  } else if(e.key === "Escape"){
+    state.selected = null;
+    updateToolbar();
+  }
+});
+
+// Global undo/redo keyboard shortcuts (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z or
+// Ctrl/Cmd+Y). Left alone while focus is in a plain text field (the
+// textarea or a settings input) so those keep their own native undo for
+// quick typo fixes - our app-wide undo is reachable from the buttons or
+// from anywhere else (e.g. while editing directly in the output pane).
+document.addEventListener("keydown", (e) => {
+  const key = e.key.toLowerCase();
+  const isUndoCombo = (e.ctrlKey || e.metaKey) && !e.shiftKey && key === "z";
+  const isRedoCombo = (e.ctrlKey || e.metaKey) && ((e.shiftKey && key === "z") || key === "y");
+  if(!isUndoCombo && !isRedoCombo) return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if(tag === "TEXTAREA" || tag === "INPUT") return;
+  e.preventDefault();
+  if(isUndoCombo) doUndo(); else doRedo();
+});
+
+// --- Selecting and dragging chord badges ---
+// Deliberately NOT native HTML5 drag/drop: inside a contenteditable region,
+// the browser's own click-vs-drag disambiguation is unreliable and was
+// swallowing plain clicks (any few-pixel wobble on mousedown got read as a
+// drag-start, so the click event never fired and the badge never got
+// selected). Instead we track mousedown -> mousemove -> mouseup ourselves:
+// if the pointer has moved past a small threshold, it's a drag; if not,
+// it's a click that toggles selection. preventDefault on mousedown also
+// keeps contenteditable's native text-selection/drag machinery out of the
+// way entirely.
+const DRAG_THRESHOLD_PX = 4;
+
+outputEl.addEventListener("mousedown", (e) => {
+  const badge = e.target.closest(".chord-badge");
+  if(!badge) return;
+  e.preventDefault();
+  syncStateFromOutputDom();
+  dragInfo = {
+    lineIndex: parseInt(badge.dataset.line, 10),
+    chordId: parseInt(badge.dataset.id, 10),
+    startX: e.clientX,
+    startY: e.clientY,
+    dragging: false,
+    badgeEl: badge
+  };
+});
+
+document.addEventListener("mousemove", (e) => {
+  if(!dragInfo) return;
+  if(!dragInfo.dragging){
+    const dx = e.clientX - dragInfo.startX;
+    const dy = e.clientY - dragInfo.startY;
+    if(Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+    dragInfo.dragging = true;
+    dragInfo.badgeEl.classList.add("dragging");
+  }
+  document.querySelectorAll("#output .line.drop-target").forEach(el => el.classList.remove("drop-target"));
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const lineEl = el ? el.closest(".line") : null;
+  if(lineEl) lineEl.classList.add("drop-target");
+});
+
+document.addEventListener("mouseup", (e) => {
+  if(!dragInfo) return;
+  const info = dragInfo;
+  dragInfo = null;
+  document.querySelectorAll("#output .line.drop-target").forEach(el => el.classList.remove("drop-target"));
+  info.badgeEl.classList.remove("dragging");
+
+  if(!info.dragging){
+    // Plain click: toggle selection and open/close the nudge toolbar.
+    if(state.selected && state.selected.lineIndex === info.lineIndex && state.selected.chordId === info.chordId){
+      state.selected = null;
+    } else {
+      state.selected = {lineIndex: info.lineIndex, chordId: info.chordId};
+    }
+    renderOutput();
+    return;
+  }
+
+  // Was a drag: drop the chord at the pointer's current position, on
+  // whichever line it's over now (same line or a different one).
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const targetLineEl = el ? el.closest(".line") : null;
+  if(!targetLineEl){ renderOutput(); return; }
+
+  syncStateFromOutputDom();
+  const targetLineIndex = parseInt(targetLineEl.dataset.lineIndex, 10);
+  const sourceEntry = state.lines[info.lineIndex];
+  const targetEntry = state.lines[targetLineIndex];
+  if(!sourceEntry || !targetEntry){ renderOutput(); return; }
+
+  const chordIdx = sourceEntry.chords.findIndex(c => c.id === info.chordId);
+  if(chordIdx === -1){ renderOutput(); return; }
+  const [chordObj] = sourceEntry.chords.splice(chordIdx, 1);
+
+  let pos = charIndexFromPoint(targetLineEl, e.clientX, e.clientY);
+  if(pos === -1) pos = targetEntry.chars.length;
+  pos = Math.max(0, Math.min(targetEntry.chars.length, pos));
+  chordObj.pos = pos;
+  targetEntry.chords.push(chordObj);
+
+  state.selected = {lineIndex: targetLineIndex, chordId: chordObj.id};
+  renderOutput();
+  pushHistory();
+});
+
+copyBtn.addEventListener("click", async () => {
+  syncStateFromOutputDom();
+  if(!currentRawOutput) return;
+  try{
+    await navigator.clipboard.writeText(currentRawOutput);
+  }catch(e){
+    const ta = document.createElement("textarea");
+    ta.value = currentRawOutput;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+  copyBtn.classList.add("copied");
+  copyLabel.textContent = "Copied!";
+  setTimeout(() => {
+    copyBtn.classList.remove("copied");
+    copyLabel.textContent = "Copy";
+  }, 1500);
+});
+
+undoBtn.addEventListener("click", doUndo);
+redoBtn.addEventListener("click", doRedo);
+saveBtn.addEventListener("click", saveToLocal);
+resetBtn.addEventListener("click", resetAll);
+
+renderOutput();
+loadFromLocalStorageOnInit();
+pushHistory();
+</script>
+
+</body>
+</html>
