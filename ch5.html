@@ -27,7 +27,9 @@
     font-family:'Inter',sans-serif;
     display:flex;
     flex-direction:column;
-    min-height:100vh;
+    height:100vh;
+    height:100dvh;
+    overflow:hidden;
   }
   header{
     padding:28px clamp(16px,4vw,48px) 18px;
@@ -210,7 +212,7 @@
   .pane-body{
     flex:1;
     position:relative;
-    min-height:420px;
+    min-height:0;
     overflow:hidden;
   }
   textarea{
@@ -390,8 +392,6 @@
 
   @media (max-width: 860px){
     body{ overflow-x:hidden; }
-    .pane{ flex:none; height:46vh; }
-    .pane-body{ min-height:0; }
   }
 </style>
 </head>
