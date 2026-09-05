@@ -967,11 +967,46 @@ function hasContent(){
   return state.lines.length > 0 || !!state.headerBlock || !!state.footerBlock;
 }
 
+// Rebuilding the output pane's DOM (below) replaces its whole innerHTML,
+// which on its own would reset scroll position to the top every time -
+// exactly what made nudging/dragging a badge on a long sheet feel like it
+// "jumped" away from the line you were working on. To prevent that, we
+// snapshot where the active line sits on screen right before the rebuild,
+// then nudge the scroll position back afterwards so that same line stays
+// pinned in the same spot - the rebuild becomes invisible to the user
+// instead of yanking them back to the top.
+function captureScrollAnchor(){
+  const lineIndex = state.selected ? state.selected.lineIndex : null;
+  if(lineIndex === null) return { mode: "scroll", scrollTop: outputEl.scrollTop };
+  const lineEl = outputEl.querySelector(`.line[data-line-index="${lineIndex}"]`);
+  if(!lineEl) return { mode: "scroll", scrollTop: outputEl.scrollTop };
+  const outputRect = outputEl.getBoundingClientRect();
+  const lineRect = lineEl.getBoundingClientRect();
+  return { mode: "line", lineIndex, offsetInViewport: lineRect.top - outputRect.top };
+}
+
+function restoreScrollAnchor(anchor){
+  if(!anchor) return;
+  if(anchor.mode === "line"){
+    const lineEl = outputEl.querySelector(`.line[data-line-index="${anchor.lineIndex}"]`);
+    if(lineEl){
+      const outputRect = outputEl.getBoundingClientRect();
+      const lineRect = lineEl.getBoundingClientRect();
+      const delta = (lineRect.top - outputRect.top) - anchor.offsetInViewport;
+      outputEl.scrollTop += delta;
+      return;
+    }
+  }
+  outputEl.scrollTop = anchor.scrollTop;
+}
+
 // Rebuilds the whole output pane's DOM from state. Only call this when it's
 // safe to lose the caret position (initial conversion, nudges, drops, blur,
 // header/footer field changes) - never on every keystroke of direct typing,
 // or the cursor would jump around.
 function renderOutput(){
+  const scrollAnchor = captureScrollAnchor();
+
   if(!hasContent()){
     suppressNextInput = true;
     outputEl.innerHTML = '<div class="placeholder">Converted chord-sheet HTML will appear here.</div>';
@@ -1006,6 +1041,7 @@ function renderOutput(){
 
   updateFlagBadge();
   updateToolbar();
+  restoreScrollAnchor(scrollAnchor);
 }
 
 function updateFlagBadge(){
