@@ -17,20 +17,17 @@
     --radius:10px;
   }
   *{box-sizing:border-box;}
-  html,body{height:100%; margin:0;}
+  html,body{margin:0;}
   body{
     background:var(--bg);
     color:var(--ink);
     font-family:'Inter',sans-serif;
     display:flex;
     flex-direction:column;
-    height:100vh;
-    overflow:hidden;
   }
   header{
     padding:28px clamp(16px,4vw,48px) 18px;
     border-bottom:1px solid var(--hairline);
-    flex-shrink:0;
   }
   header h1{
     font-family:Georgia,'Times New Roman',serif;
@@ -178,23 +175,20 @@
   }
 
   main{
-    flex:1 1 auto;
     display:flex;
     flex-direction:column;
     gap:1px;
     background:var(--hairline);
-    min-height:0;
-    overflow:hidden;
   }
   .pane{
     background:var(--bg);
     display:flex;
     flex-direction:column;
-    flex:1 1 0;
     min-width:0;
-    min-height:0;
     overflow:hidden;
   }
+  .pane-output{ height:560px; }
+  .pane-input{ height:280px; }
   .pane-head{
     display:flex;
     align-items:center;
@@ -402,7 +396,6 @@
 
 <header>
   <h1>Chord Sheet <span>Converter</span></h1>
-  <p>Paste legacy chord-over-lyric HTML on the left. Get inline <code>[Chord]lyric</code> notation, ready for <code>.chord-sheet</code>, on the right. Click a chord badge to select it and nudge it by letter or word, drag a badge to drop it somewhere new, or click straight into the text to edit it directly: delete spaces, add line breaks, or type a new chord as <code>[Chord]</code>.</p>
 </header>
 
 <div class="controls">
@@ -438,7 +431,7 @@
 </div>
 
 <main>
-  <div class="pane">
+  <div class="pane pane-output">
     <div class="pane-head">
       <h2>Converted output</h2>
       <button class="copy-btn" id="copyBtn">
@@ -461,7 +454,7 @@
     </div>
   </div>
 
-  <div class="pane">
+  <div class="pane pane-input">
     <div class="pane-head">
       <h2>Legacy HTML</h2>
     </div>
@@ -594,13 +587,32 @@ function convert(html, cjkWidth){
   const results = [];
   let i = 0;
   let composerLine = "";
-  if(lines.length > 0 && !isChordLine(lines[0])){
+  let detectedKey = "";
+  let detectedCapo = "";
+
+  const isKeyOrCapoLine = (line) => {
+    const t = line.trim();
+    return KEY_LINE_RE.test(t) || CAPO_LINE_RE.test(t);
+  };
+
+  if(lines.length > 0 && !isChordLine(lines[0]) && !isKeyOrCapoLine(lines[0])){
     composerLine = lines[0];
     i = 1;
   }
   while(i < lines.length){
     const line = lines[i];
+    const trimmed = line.trim();
     let entry;
+    if(KEY_LINE_RE.test(trimmed)){
+      if(!detectedKey) detectedKey = trimmed.replace(/^key\s*:\s*/i, "").trim();
+      i += 1;
+      continue;
+    }
+    if(CAPO_LINE_RE.test(trimmed)){
+      if(!detectedCapo) detectedCapo = trimmed;
+      i += 1;
+      continue;
+    }
     if(isChordLine(line) && i+1 < lines.length && !isChordLine(lines[i+1])){
       entry = mergeLine(line, lines[i+1], cjkWidth);
       i += 2;
@@ -608,16 +620,13 @@ function convert(html, cjkWidth){
       const chords = findChords(line).map(c => ({id: nextChordId++, chord:c.chord, pos:0}));
       entry = {chars: [], wordStarts:[0], chords, flagged: chords.length > 0};
       i += 1;
-    } else if(KEY_LINE_RE.test(line.trim()) || CAPO_LINE_RE.test(line.trim())){
-      i += 1;
-      continue;
     } else {
       entry = {chars: Array.from(line), wordStarts: computeWordStarts(Array.from(line)), chords: [], flagged:false};
       i += 1;
     }
     results.push(entry);
   }
-  return {composerLine: escapeHtml(composerLine), lines: results};
+  return {composerLine: escapeHtml(composerLine), lines: results, detectedKey, detectedCapo};
 }
 
 function parseBodyLine(line){
@@ -840,7 +849,9 @@ function fullConvert(){
     return;
   }
   const cjkWidth = parseFloat(cjkWidthEl.value) || 2.3;
-  const {composerLine, lines} = convert(html, cjkWidth);
+  const {composerLine, lines, detectedKey, detectedCapo} = convert(html, cjkWidth);
+  if(detectedKey && !perfKeyEl.value.trim()) perfKeyEl.value = detectedKey;
+  if(detectedCapo && !capoLineEl.value.trim()) capoLineEl.value = detectedCapo;
   state.composerLine = composerLine;
   state.lines = lines;
   state.selected = null;
