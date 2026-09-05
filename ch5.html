@@ -178,7 +178,7 @@
   main{
     flex:1;
     display:flex;
-    flex-direction:row;
+    flex-direction:column;
     gap:1px;
     background:var(--hairline);
     min-height:0;
@@ -390,7 +390,6 @@
 
   @media (max-width: 860px){
     body{ overflow-x:hidden; }
-    main{ flex-direction:column; }
     .pane{ flex:none; height:46vh; }
     .pane-body{ min-height:0; }
   }
@@ -438,15 +437,6 @@
 <main>
   <div class="pane">
     <div class="pane-head">
-      <h2>Legacy HTML</h2>
-    </div>
-    <div class="pane-body">
-      <textarea id="input" placeholder="Paste your exported <p>/<br> chord sheet HTML here…" spellcheck="false"></textarea>
-    </div>
-  </div>
-
-  <div class="pane">
-    <div class="pane-head">
       <h2>Converted output</h2>
       <button class="copy-btn" id="copyBtn">
         <span id="copyLabel">Copy</span>
@@ -465,6 +455,15 @@
     </div>
     <div class="pane-body">
       <div id="output" spellcheck="false"><div class="placeholder">Converted chord-sheet HTML will appear here.</div></div>
+    </div>
+  </div>
+
+  <div class="pane">
+    <div class="pane-head">
+      <h2>Legacy HTML</h2>
+    </div>
+    <div class="pane-body">
+      <textarea id="input" placeholder="Paste your exported <p>/<br> chord sheet HTML here…" spellcheck="false"></textarea>
     </div>
   </div>
 </main>
