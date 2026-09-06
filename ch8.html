@@ -689,4 +689,681 @@ function convert(html, cjkWidth){
     }
     results.push(entry);
   }
-  return {composerLi
+  return {composerLine: escapeHtml(composerLine), lines: results, detectedKey, detectedCapo, detectedSongwriter: escapeHtml(detectedSongwriter)};
+}
+
+function parseBodyLine(line){
+  const chars = [];
+  const chords = [];
+  let i = 0;
+  while(i < line.length){
+    if(line[i] === "["){
+      const end = line.indexOf("]", i);
+      if(end !== -1){
+        const chordName = line.slice(i+1, end);
+        chords.push({id: nextChordId++, chord: chordName, pos: chars.length});
+        i = end + 1;
+        continue;
+      }
+    }
+    chars.push(line[i]);
+    i++;
+  }
+  const wordStarts = computeWordStarts(chars);
+  const seenPos = new Set();
+  let flagged = false;
+  chords.forEach(c => {
+    if(seenPos.has(c.pos)) flagged = true;
+    seenPos.add(c.pos);
+  });
+  return {chars, wordStarts, chords, flagged};
+}
+
+function parseBodyText(text){
+  return text.split("\n").map(parseBodyLine);
+}
+
+const inputEl = document.getElementById("input");
+const outputEl = document.getElementById("output");
+const CJK_WIDTH = 2.6;
+const flagBadge = document.getElementById("flagBadge");
+const flagCount = document.getElementById("flagCount");
+const copyBtn = document.getElementById("copyBtn");
+const copyLabel = document.getElementById("copyLabel");
+const perfKeyEl = document.getElementById("perfKey");
+const capoLineEl = document.getElementById("capoLine");
+const videoIdEl = document.getElementById("videoId");
+const nudgeToolbar = document.getElementById("nudgeToolbar");
+const nudgeChordNameEl = document.getElementById("nudgeChordName");
+const undoBtn = document.getElementById("undoBtn");
+const redoBtn = document.getElementById("redoBtn");
+const saveBtn = document.getElementById("saveBtn");
+const resetBtn = document.getElementById("resetBtn");
+const saveStatusEl = document.getElementById("saveStatus");
+
+function extractYoutubeId(rawHtml){
+  const m = rawHtml.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/)
+        || rawHtml.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/)
+        || rawHtml.match(/[?&]v=([A-Za-z0-9_-]{6,})/);
+  return m ? m[1] : "";
+}
+
+function resolveVideoId(value){
+  const v = value.trim();
+  if(!v) return "";
+  const m = v.match(/embed\/([A-Za-z0-9_-]{6,})/) || v.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/)
+        || v.match(/[?&]v=([A-Za-z0-9_-]{6,})/);
+  if(m) return m[1];
+  return v;
+}
+
+function buildHeaderBlock(composer, songwriter, key, capo){
+  const c = (composer || "").trim();
+  const sw = (songwriter || "").trim();
+  const k = key.trim();
+  if(!c && !sw && !k) return "";
+  let inner = "";
+  if(c) inner += c;
+  if(sw){
+    if(inner) inner += "<br><br>";
+    inner += sw;
+  }
+  if(k){
+    if(inner) inner += "<br><br>";
+    inner += "Key: " + k;
+    if(capo.trim()) inner += "<br>" + capo.trim();
+  }
+  return "<br><b>" + inner + "</b><br><br>";
+}
+
+function buildFooterBlock(videoField){
+  const id = resolveVideoId(videoField);
+  if(!id) return "";
+  return "<br>\n<div class=\"video-container\">\n  <iframe src=\"https://www.youtube.com/embed/" + id + "\" title=\"YouTube video player\"\n    frameborder=\"0\"\n    allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\"\n    allowfullscreen>\n  </iframe>\n</div>";
+}
+
+let state = { composerLine: "", songwriterLine: "", headerBlock: "", footerBlock: "", lines: [], selected: null };
+let currentRawOutput = "";
+let suppressNextInput = false;
+let dragInfo = null;
+
+const STORAGE_KEY = "chordSheetConverterSave_v1";
+const HISTORY_LIMIT = 100;
+let historyStack = [];
+let historyIndex = -1;
+let isRestoring = false;
+
+function snapshot(){
+  return {
+    inputValue: inputEl.value,
+    perfKey: perfKeyEl.value,
+    capoLine: capoLineEl.value,
+    videoId: videoIdEl.value,
+    composerLine: state.composerLine,
+    songwriterLine: state.songwriterLine,
+    headerBlock: state.headerBlock,
+    footerBlock: state.footerBlock,
+    lines: JSON.parse(JSON.stringify(state.lines)),
+    nextChordId: nextChordId
+  };
+}
+
+function pushHistory(){
+  if(isRestoring) return;
+  const snap = snapshot();
+  const last = historyStack[historyIndex];
+  if(last && JSON.stringify(last) === JSON.stringify(snap)){
+    updateUndoRedoButtons();
+    return;
+  }
+  historyStack = historyStack.slice(0, historyIndex + 1);
+  historyStack.push(snap);
+  if(historyStack.length > HISTORY_LIMIT){
+    historyStack.shift();
+  }
+  historyIndex = historyStack.length - 1;
+  updateUndoRedoButtons();
+}
+
+function restoreSnapshot(snap){
+  isRestoring = true;
+  inputEl.value = snap.inputValue || "";
+  perfKeyEl.value = snap.perfKey || "";
+  capoLineEl.value = snap.capoLine || "";
+  videoIdEl.value = snap.videoId || "";
+  state.composerLine = snap.composerLine || "";
+  state.songwriterLine = snap.songwriterLine || "";
+  state.headerBlock = snap.headerBlock || "";
+  state.footerBlock = snap.footerBlock || "";
+  state.lines = JSON.parse(JSON.stringify(snap.lines || []));
+  state.selected = null;
+  nextChordId = snap.nextChordId || 1;
+  renderOutput();
+  isRestoring = false;
+  updateUndoRedoButtons();
+}
+
+function doUndo(){
+  if(historyIndex <= 0) return;
+  historyIndex--;
+  restoreSnapshot(historyStack[historyIndex]);
+}
+
+function doRedo(){
+  if(historyIndex >= historyStack.length - 1) return;
+  historyIndex++;
+  restoreSnapshot(historyStack[historyIndex]);
+}
+
+function updateUndoRedoButtons(){
+  undoBtn.disabled = historyIndex <= 0;
+  redoBtn.disabled = historyIndex >= historyStack.length - 1;
+}
+
+let saveStatusTimer;
+function showSaveStatus(msg){
+  saveStatusEl.textContent = msg;
+  clearTimeout(saveStatusTimer);
+  if(msg){
+    saveStatusTimer = setTimeout(() => { saveStatusEl.textContent = ""; }, 4000);
+  }
+}
+
+function saveToLocal(){
+  syncStateFromOutputDom();
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot()));
+    showSaveStatus("Saved to this browser just now");
+  }catch(err){
+    showSaveStatus("Couldn't save — local storage isn't available here");
+  }
+}
+
+function loadFromLocalStorageOnInit(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const snap = JSON.parse(raw);
+    if(snap && typeof snap === "object"){
+      restoreSnapshot(snap);
+      showSaveStatus("Restored your last saved session");
+    }
+  }catch(err){
+  }
+}
+
+function resetAll(){
+  const proceed = window.confirm("Reset will clear everything you've entered, including any saved copy in this browser. This can't be undone once you save or navigate away. Continue?");
+  if(!proceed) return;
+  inputEl.value = "";
+  perfKeyEl.value = "";
+  capoLineEl.value = "";
+  videoIdEl.value = "";
+  state = { composerLine: "", songwriterLine: "", headerBlock: "", footerBlock: "", lines: [], selected: null };
+  nextChordId = 1;
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(err){ }
+  renderOutput();
+  pushHistory();
+  showSaveStatus("Reset to a blank sheet");
+}
+
+function fullConvert(){
+  const html = inputEl.value;
+  if(!html.trim()){
+    state = { composerLine: "", songwriterLine: "", headerBlock: "", footerBlock: "", lines: [], selected: null };
+    renderOutput();
+    pushHistory();
+    return;
+  }
+  const {composerLine, lines, detectedKey, detectedCapo, detectedSongwriter} = convert(html, CJK_WIDTH);
+  if(detectedKey && !perfKeyEl.value.trim()) perfKeyEl.value = detectedKey;
+  if(detectedCapo && !capoLineEl.value.trim()) capoLineEl.value = detectedCapo;
+  state.composerLine = composerLine;
+  state.songwriterLine = detectedSongwriter;
+  state.lines = lines;
+  state.selected = null;
+  state.headerBlock = buildHeaderBlock(state.composerLine, state.songwriterLine, perfKeyEl.value, capoLineEl.value);
+  state.footerBlock = buildFooterBlock(videoIdEl.value);
+  renderOutput();
+  pushHistory();
+}
+
+function rebuildHeaderFooter(){
+  state.headerBlock = buildHeaderBlock(state.composerLine, state.songwriterLine, perfKeyEl.value, capoLineEl.value);
+  state.footerBlock = buildFooterBlock(videoIdEl.value);
+  renderOutput();
+  pushHistory();
+}
+
+function buildLineString(entry){
+  const chords = entry.chords.slice().sort((a,b) => a.pos - b.pos);
+  let out = "";
+  let ci = 0;
+  for(let i=0; i<=entry.chars.length; i++){
+    while(ci < chords.length && chords[ci].pos === i){
+      out += "[" + chords[ci].chord + "]";
+      ci++;
+    }
+    if(i < entry.chars.length) out += entry.chars[i];
+  }
+  return out;
+}
+
+function buildBodyText(){
+  return state.lines.map(buildLineString).join("\n");
+}
+
+function buildLinePreviewHTML(entry, lineIndex){
+  const chords = entry.chords.slice().sort((a,b) => a.pos - b.pos);
+  let inner = "";
+  let ci = 0;
+  for(let i=0; i<=entry.chars.length; i++){
+    while(ci < chords.length && chords[ci].pos === i){
+      const c = chords[ci];
+      const sel = state.selected && state.selected.lineIndex === lineIndex && state.selected.chordId === c.id;
+      inner += `<span class="chord-badge${sel ? " selected" : ""}" contenteditable="false" data-line="${lineIndex}" data-id="${c.id}">[${escapeHtml(c.chord)}]</span>`;
+      ci++;
+    }
+    if(i < entry.chars.length) inner += escapeHtml(entry.chars[i]);
+  }
+  if(inner === "") inner = "<br>";
+  return `<div class="line${entry.flagged ? " flagged" : ""}" data-line-index="${lineIndex}">${inner}</div>`;
+}
+
+function updateToolbar(){
+  let selectedChord = null;
+  if(state.selected){
+    const entry = state.lines[state.selected.lineIndex];
+    selectedChord = entry && entry.chords.find(c => c.id === state.selected.chordId);
+  }
+  if(!selectedChord){
+    if(state.selected) state.selected = null;
+    nudgeToolbar.classList.remove("visible");
+    return;
+  }
+  nudgeToolbar.classList.add("visible");
+  nudgeChordNameEl.textContent = selectedChord.chord;
+}
+
+function computeFullRawOutput(){
+  if(state.lines.length === 0 && !state.headerBlock && !state.footerBlock) return "";
+  let rawText = "";
+  if(state.headerBlock) rawText += state.headerBlock + "\n";
+  rawText += '<div class="chord-sheet">\n';
+  rawText += buildBodyText();
+  if(state.lines.length > 0) rawText += "\n";
+  rawText += '</div>';
+  if(state.footerBlock) rawText += state.footerBlock;
+  return rawText;
+}
+
+function hasContent(){
+  return state.lines.length > 0 || !!state.headerBlock || !!state.footerBlock;
+}
+
+function captureScrollAnchor(){
+  const lineIndex = state.selected ? state.selected.lineIndex : null;
+  if(lineIndex === null) return { mode: "scroll", scrollTop: outputEl.scrollTop };
+  const lineEl = outputEl.querySelector(`.line[data-line-index="${lineIndex}"]`);
+  if(!lineEl) return { mode: "scroll", scrollTop: outputEl.scrollTop };
+  const outputRect = outputEl.getBoundingClientRect();
+  const lineRect = lineEl.getBoundingClientRect();
+  return { mode: "line", lineIndex, offsetInViewport: lineRect.top - outputRect.top };
+}
+
+function restoreScrollAnchor(anchor){
+  if(!anchor) return;
+  if(anchor.mode === "line"){
+    const lineEl = outputEl.querySelector(`.line[data-line-index="${anchor.lineIndex}"]`);
+    if(lineEl){
+      const outputRect = outputEl.getBoundingClientRect();
+      const lineRect = lineEl.getBoundingClientRect();
+      const delta = (lineRect.top - outputRect.top) - anchor.offsetInViewport;
+      outputEl.scrollTop += delta;
+      return;
+    }
+  }
+  outputEl.scrollTop = anchor.scrollTop;
+}
+
+function renderOutput(){
+  const scrollAnchor = captureScrollAnchor();
+
+  if(!hasContent()){
+    suppressNextInput = true;
+    outputEl.innerHTML = '<div class="placeholder">Converted chord-sheet HTML will appear here.</div>';
+    outputEl.contentEditable = "false";
+    flagBadge.style.display = "none";
+    currentRawOutput = "";
+    updateToolbar();
+    return;
+  }
+
+  let previewHtml = "";
+
+  if(state.headerBlock){
+    previewHtml += `<div class="meta" contenteditable="false">${escapeHtml(state.headerBlock)}</div>`;
+  }
+  previewHtml += '<div class="meta" contenteditable="false">&lt;div class="chord-sheet"&gt;</div>';
+
+  state.lines.forEach((entry, idx) => {
+    previewHtml += buildLinePreviewHTML(entry, idx);
+  });
+
+  previewHtml += '<div class="meta" contenteditable="false">&lt;/div&gt;</div>';
+
+  if(state.footerBlock){
+    previewHtml += `<div class="meta" contenteditable="false">${escapeHtml(state.footerBlock)}</div>`;
+  }
+
+  suppressNextInput = true;
+  outputEl.innerHTML = previewHtml;
+  outputEl.contentEditable = "true";
+  currentRawOutput = computeFullRawOutput();
+
+  updateFlagBadge();
+  updateToolbar();
+  restoreScrollAnchor(scrollAnchor);
+}
+
+function updateFlagBadge(){
+  const flagged = state.lines.reduce((n, e) => n + (e.flagged ? 1 : 0), 0);
+  if(flagged > 0){
+    flagBadge.style.display = "flex";
+    flagCount.textContent = flagged;
+  } else {
+    flagBadge.style.display = "none";
+  }
+}
+
+function syncStateFromOutputDom(){
+  if(!outputEl.isContentEditable && outputEl.contentEditable !== "true") return;
+  const lineEls = Array.from(outputEl.children).filter(el => el.classList.contains("line"));
+  if(lineEls.length === 0 && state.lines.length === 0) return;
+  const raw = lineEls.map(el => el.textContent).join("\n");
+  const newLines = parseBodyText(raw);
+
+  newLines.forEach((entry, li) => {
+    const oldEntry = state.lines[li];
+    if(!oldEntry) return;
+    const oldSorted = oldEntry.chords.slice().sort((a,b) => a.pos - b.pos);
+    const newSorted = entry.chords.slice().sort((a,b) => a.pos - b.pos);
+    for(let i=0; i<newSorted.length && i<oldSorted.length; i++){
+      newSorted[i].id = oldSorted[i].id;
+    }
+  });
+
+  state.lines = newLines;
+  currentRawOutput = computeFullRawOutput();
+  updateFlagBadge();
+}
+
+function nudgeChord(lineIndex, chordId, dir, unit){
+  const entry = state.lines[lineIndex];
+  if(!entry) return;
+  const chordObj = entry.chords.find(c => c.id === chordId);
+  if(!chordObj) return;
+
+  if(unit === "letter"){
+    chordObj.pos = Math.max(0, Math.min(entry.chars.length, chordObj.pos + dir));
+  } else {
+    const targets = Array.from(new Set([...entry.wordStarts, entry.chars.length])).sort((a,b) => a-b);
+    if(dir > 0){
+      const next = targets.find(t => t > chordObj.pos);
+      chordObj.pos = next !== undefined ? next : entry.chars.length;
+    } else {
+      const prevTargets = targets.filter(t => t < chordObj.pos);
+      chordObj.pos = prevTargets.length ? prevTargets[prevTargets.length - 1] : 0;
+    }
+  }
+  renderOutput();
+  pushHistory();
+}
+
+function charIndexFromPoint(lineEl, clientX, clientY){
+  let node = null, offset = 0;
+  if(document.caretRangeFromPoint){
+    const range = document.caretRangeFromPoint(clientX, clientY);
+    if(range){ node = range.startContainer; offset = range.startOffset; }
+  } else if(document.caretPositionFromPoint){
+    const pos = document.caretPositionFromPoint(clientX, clientY);
+    if(pos){ node = pos.offsetNode; offset = pos.offset; }
+  }
+  if(!node || !lineEl.contains(node)) return -1;
+
+  if(node === lineEl){
+    let count = 0;
+    for(let i=0; i<offset && i<lineEl.childNodes.length; i++){
+      const c = lineEl.childNodes[i];
+      if(c.nodeType === Node.TEXT_NODE) count += c.textContent.length;
+    }
+    return count;
+  }
+
+  let count = 0;
+  for(const child of lineEl.childNodes){
+    if(child === node){
+      if(child.nodeType === Node.TEXT_NODE) count += offset;
+      return count;
+    }
+    if(child.nodeType === Node.TEXT_NODE){
+      count += child.textContent.length;
+    } else if(child.nodeType === Node.ELEMENT_NODE){
+      if(child.contains(node)) return count;
+    }
+  }
+  return count;
+}
+
+let debounceTimer;
+inputEl.addEventListener("input", () => {
+  if(!videoIdEl.value.trim()){
+    const found = extractYoutubeId(inputEl.value);
+    if(found) videoIdEl.value = found;
+  }
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(fullConvert, 120);
+});
+perfKeyEl.addEventListener("input", rebuildHeaderFooter);
+capoLineEl.addEventListener("input", rebuildHeaderFooter);
+videoIdEl.addEventListener("input", rebuildHeaderFooter);
+
+let outputDebounce;
+outputEl.addEventListener("input", () => {
+  if(suppressNextInput){ suppressNextInput = false; return; }
+  clearTimeout(outputDebounce);
+  outputDebounce = setTimeout(() => {
+    syncStateFromOutputDom();
+    pushHistory();
+  }, 150);
+});
+
+outputEl.addEventListener("blur", () => {
+  syncStateFromOutputDom();
+  renderOutput();
+  pushHistory();
+});
+
+outputEl.addEventListener("click", (e) => {
+  if(e.target.closest(".chord-badge")) return;
+  syncStateFromOutputDom();
+  if(state.selected){
+    state.selected = null;
+    updateToolbar();
+  }
+});
+
+nudgeToolbar.addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if(!btn || !state.selected) return;
+  syncStateFromOutputDom();
+  if(btn.dataset.action === "deselect"){
+    state.selected = null;
+    renderOutput();
+    return;
+  }
+  nudgeChord(state.selected.lineIndex, state.selected.chordId, parseInt(btn.dataset.dir, 10), btn.dataset.action);
+});
+
+document.addEventListener("keydown", (e) => {
+  if(!state.selected) return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if(tag === "TEXTAREA" || tag === "INPUT") return;
+
+  if(e.key === "ArrowLeft"){
+    e.preventDefault();
+    nudgeChord(state.selected.lineIndex, state.selected.chordId, -1, e.shiftKey ? "word" : "letter");
+  } else if(e.key === "ArrowRight"){
+    e.preventDefault();
+    nudgeChord(state.selected.lineIndex, state.selected.chordId, 1, e.shiftKey ? "word" : "letter");
+  } else if(e.key === "Escape"){
+    state.selected = null;
+    updateToolbar();
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  const key = e.key.toLowerCase();
+  const isUndoCombo = (e.ctrlKey || e.metaKey) && !e.shiftKey && key === "z";
+  const isRedoCombo = (e.ctrlKey || e.metaKey) && ((e.shiftKey && key === "z") || key === "y");
+  if(!isUndoCombo && !isRedoCombo) return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if(tag === "TEXTAREA" || tag === "INPUT") return;
+  e.preventDefault();
+  if(isUndoCombo) doUndo(); else doRedo();
+});
+
+const DRAG_THRESHOLD_PX = 4;
+
+// Mobile browsers focus a contenteditable region (and scroll the page to
+// make room for the on-screen keyboard) as soon as a touch lands inside
+// it - that's what was causing the whole page to jump down to the legacy
+// pane whenever a badge was tapped. preventDefault() on mousedown alone
+// doesn't stop this, because on a touch device the browser's focus/scroll
+// behavior is already driven by the earlier touchstart event, before any
+// synthesized mousedown even fires. Handling touchstart/touchmove/touchend
+// directly - and calling preventDefault() on touchstart for a badge -
+// stops that default focus-and-scroll before it happens. getPoint() lets
+// the rest of the drag logic stay agnostic to which kind of event fired.
+function getPoint(e){
+  if(e.touches && e.touches.length) return {x: e.touches[0].clientX, y: e.touches[0].clientY};
+  if(e.changedTouches && e.changedTouches.length) return {x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY};
+  return {x: e.clientX, y: e.clientY};
+}
+
+function handleBadgePointerStart(e){
+  const badge = e.target.closest(".chord-badge");
+  if(!badge) return;
+  e.preventDefault();
+  syncStateFromOutputDom();
+  const p = getPoint(e);
+  dragInfo = {
+    lineIndex: parseInt(badge.dataset.line, 10),
+    chordId: parseInt(badge.dataset.id, 10),
+    startX: p.x,
+    startY: p.y,
+    dragging: false,
+    badgeEl: badge
+  };
+}
+
+function handlePointerMove(e){
+  if(!dragInfo) return;
+  const p = getPoint(e);
+  if(!dragInfo.dragging){
+    const dx = p.x - dragInfo.startX;
+    const dy = p.y - dragInfo.startY;
+    if(Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+    dragInfo.dragging = true;
+    dragInfo.badgeEl.classList.add("dragging");
+  }
+  if(e.cancelable) e.preventDefault(); // stop the page from scrolling under a drag
+  document.querySelectorAll("#output .line.drop-target").forEach(el => el.classList.remove("drop-target"));
+  const el = document.elementFromPoint(p.x, p.y);
+  const lineEl = el ? el.closest(".line") : null;
+  if(lineEl) lineEl.classList.add("drop-target");
+}
+
+function handlePointerEnd(e){
+  if(!dragInfo) return;
+  const info = dragInfo;
+  dragInfo = null;
+  document.querySelectorAll("#output .line.drop-target").forEach(el => el.classList.remove("drop-target"));
+  info.badgeEl.classList.remove("dragging");
+  const p = getPoint(e);
+
+  if(!info.dragging){
+    if(state.selected && state.selected.lineIndex === info.lineIndex && state.selected.chordId === info.chordId){
+      state.selected = null;
+    } else {
+      state.selected = {lineIndex: info.lineIndex, chordId: info.chordId};
+    }
+    renderOutput();
+    return;
+  }
+
+  const el = document.elementFromPoint(p.x, p.y);
+  const targetLineEl = el ? el.closest(".line") : null;
+  if(!targetLineEl){ renderOutput(); return; }
+
+  syncStateFromOutputDom();
+  const targetLineIndex = parseInt(targetLineEl.dataset.lineIndex, 10);
+  const sourceEntry = state.lines[info.lineIndex];
+  const targetEntry = state.lines[targetLineIndex];
+  if(!sourceEntry || !targetEntry){ renderOutput(); return; }
+
+  const chordIdx = sourceEntry.chords.findIndex(c => c.id === info.chordId);
+  if(chordIdx === -1){ renderOutput(); return; }
+  const [chordObj] = sourceEntry.chords.splice(chordIdx, 1);
+
+  let pos = charIndexFromPoint(targetLineEl, p.x, p.y);
+  if(pos === -1) pos = targetEntry.chars.length;
+  pos = Math.max(0, Math.min(targetEntry.chars.length, pos));
+  chordObj.pos = pos;
+  targetEntry.chords.push(chordObj);
+
+  state.selected = {lineIndex: targetLineIndex, chordId: chordObj.id};
+  renderOutput();
+  pushHistory();
+}
+
+outputEl.addEventListener("mousedown", handleBadgePointerStart);
+outputEl.addEventListener("touchstart", handleBadgePointerStart, {passive:false});
+document.addEventListener("mousemove", handlePointerMove);
+document.addEventListener("touchmove", handlePointerMove, {passive:false});
+document.addEventListener("mouseup", handlePointerEnd);
+document.addEventListener("touchend", handlePointerEnd);
+
+copyBtn.addEventListener("click", async () => {
+  syncStateFromOutputDom();
+  if(!currentRawOutput) return;
+  try{
+    await navigator.clipboard.writeText(currentRawOutput);
+  }catch(e){
+    const ta = document.createElement("textarea");
+    ta.value = currentRawOutput;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+  copyBtn.classList.add("copied");
+  copyLabel.textContent = "Copied!";
+  setTimeout(() => {
+    copyBtn.classList.remove("copied");
+    copyLabel.textContent = "Copy";
+  }, 1500);
+});
+
+undoBtn.addEventListener("click", doUndo);
+redoBtn.addEventListener("click", doRedo);
+saveBtn.addEventListener("click", saveToLocal);
+resetBtn.addEventListener("click", resetAll);
+
+renderOutput();
+loadFromLocalStorageOnInit();
+pushHistory();
+</script>
+
+</body>
+</html>
