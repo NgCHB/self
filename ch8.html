@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chord Sheet Converter</title>
+<style>
+  :root{
+    --bg:#FFFFFF;
+    --panel:#F7F6F3;
+    --panel-2:#F0EFEA;
+    --ink:#211F26;
+    --ink-dim:#6B6659;
+    --hairline:rgba(33,31,38,0.12);
+    --gold:#A6791E;
+    --wine:#A14A63;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    display:flex;
+    flex-direction:column;
+  }
+  header{
+    padding:28px clamp(16px,4vw,48px) 18px;
+    border-bottom:1px solid var(--hairline);
+  }
+  header h1{
+    font-family:Georgia,'Times New Roman',serif;
+    font-weight:600;
+    font-size:clamp(24px,3vw,32px);
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  header h1 span{ color:var(--gold); }
+  header p{
+    margin:0;
+    color:var(--ink-dim);
+    font-size:14px;
+    max-width:64ch;
+  }
+  .controls{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
+    padding:14px clamp(16px,4vw,48px);
+    border-bottom:1px solid var(--hairline);
+    background:var(--panel-2);
+    flex-shrink:0;
+  }
+  .controls label{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-dim);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .controls input[type="number"]{
+    width:64px;
+    background:var(--bg);
+    border:1px solid var(--hairline);
+    color:var(--ink);
+    border-radius:6px;
+    padding:5px 8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+  }
+  .controls input[type="number"]:focus-visible,
+  .controls-row input[type="text"]:focus-visible,
+  textarea:focus-visible,
+  button:focus-visible,
+  .chord-badge:focus-visible,
+  #output:focus-visible{
+    outline:2px solid var(--gold);
+    outline-offset:2px;
+  }
+  .controls-row input[type="text"]{
+    background:var(--bg);
+    border:1px solid var(--hairline);
+    color:var(--ink);
+    border-radius:6px;
+    padding:5px 8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+  }
+  .controls-row{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
+    padding:12px clamp(16px,4vw,48px);
+    border-bottom:1px solid var(--hairline);
+    background:var(--panel-2);
+    flex-shrink:0;
+  }
+  .controls-row label{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-dim);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .flag-badge{
+    font-size:12px;
+    color:var(--wine);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-left:auto;
+  }
+  .flag-badge .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--wine);
+    display:inline-block;
+  }
+
+  /* --- Undo/redo/save/reset toolbar --- */
+  .action-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    padding:10px clamp(16px,4vw,48px);
+    border-bottom:1px solid var(--hairline);
+    background:var(--bg);
+    flex-shrink:0;
+  }
+  .toolbar-btn{
+    background:var(--bg);
+    border:1px solid var(--hairline);
+    color:var(--ink);
+    padding:6px 14px;
+    border-radius:20px;
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    font-weight:500;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    transition:border-color .15s, color .15s, opacity .15s;
+  }
+  .toolbar-btn:hover:not(:disabled){
+    border-color:var(--gold);
+    color:var(--gold);
+  }
+  .toolbar-btn:disabled{
+    opacity:0.35;
+    cursor:not-allowed;
+  }
+  .toolbar-btn.danger:hover:not(:disabled){
+    border-color:var(--wine);
+    color:var(--wine);
+  }
+  .action-sep{
+    width:1px;
+    height:18px;
+    background:var(--hairline);
+    margin:0 4px;
+  }
+  .save-status{
+    font-size:11px;
+    color:var(--ink-dim);
+    margin-right:auto;
+    font-style:italic;
+  }
+
+  main{
+    display:flex;
+    flex-direction:column;
+    gap:1px;
+    background:var(--hairline);
+  }
+  .pane{
+    background:var(--bg);
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+    overflow:hidden;
+  }
+  .pane-output{ height:280px; }
+  .pane-input{ height:280px; }
+  .pane-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 20px;
+    border-bottom:1px solid var(--hairline);
+    flex-shrink:0;
+  }
+  .pane-head h2{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    font-weight:600;
+    color:var(--ink-dim);
+    margin:0;
+  }
+  .pane-body{
+    flex:1 1 auto;
+    position:relative;
+    min-height:0;
+    overflow:hidden;
+  }
+  textarea{
+    width:100%;
+    height:100%;
+    resize:none;
+    border:none;
+    background:transparent;
+    color:var(--ink);
+    font-family:'JetBrains Mono',monospace;
+    font-size:13.5px;
+    line-height:1.7;
+    padding:20px;
+    white-space:pre;
+    overflow:auto;
+    display:block;
+  }
+
+  /* --- Nudge toolbar --- */
+  .nudge-toolbar{
+    display:none;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+    padding:10px 20px;
+    background:var(--panel-2);
+    border-bottom:1px solid var(--hairline);
+    font-family:'Inter',sans-serif;
+    flex-shrink:0;
+  }
+  .nudge-toolbar.visible{ display:flex; }
+  .nudge-label{
+    font-size:12px;
+    color:var(--ink-dim);
+  }
+  .nudge-label b{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--gold);
+    font-size:13px;
+  }
+  .nudge-btns{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .nudge-btns button{
+    background:var(--bg);
+    border:1px solid var(--hairline);
+    color:var(--ink);
+    width:30px;
+    height:28px;
+    border-radius:6px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:14px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:border-color .15s, color .15s;
+  }
+  .nudge-btns button:hover{
+    border-color:var(--gold);
+    color:var(--gold);
+  }
+  .nudge-btns button[data-action="deselect"]{
+    color:var(--wine);
+    margin-left:4px;
+  }
+  .nudge-btns button[data-action="deselect"]:hover{
+    border-color:var(--wine);
+  }
+  .nudge-hint{
+    font-size:11px;
+    color:var(--ink-dim);
+    margin-left:auto;
+  }
+
+  #output{
+    position:absolute;
+    inset:0;
+    padding:20px;
+    overflow:auto;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13.5px;
+    line-height:1.9;
+  }
+  #output[contenteditable="true"]{
+    cursor:text;
+  }
+  #output .line{
+    white-space:pre-wrap;
+    padding:2px 10px 2px 12px;
+    border-left:2px solid transparent;
+    border-radius:3px;
+  }
+  #output .line.flagged{
+    border-left-color:var(--wine);
+    background:rgba(181,99,122,0.08);
+  }
+  #output .line.flagged::after{
+    content:"review";
+    float:right;
+    font-size:10px;
+    color:var(--wine);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    font-family:'Inter',sans-serif;
+  }
+  #output .line.drop-target{
+    background:rgba(166,121,30,0.08);
+    border-left-color:var(--gold);
+  }
+  #output .chord-badge{
+    position:relative;
+    color:var(--gold);
+    font-weight:600;
+    cursor:grab;
+    border:1px solid transparent;
+    border-radius:4px;
+    padding:0 1px;
+    user-select:none;
+  }
+  /* Invisible padding so the badge is much easier to hit than its visible
+     text - purely absolute-positioned, so it never nudges surrounding
+     layout or chord alignment. */
+  #output .chord-badge::before{
+    content:"";
+    position:absolute;
+    inset:-6px -4px;
+  }
+  #output .chord-badge:active{
+    cursor:grabbing;
+  }
+  #output .chord-badge:hover{
+    background:rgba(166,121,30,0.14);
+    border-color:rgba(166,121,30,0.35);
+  }
+  #output .chord-badge.selected{
+    background:var(--wine);
+    color:#fff;
+    border-color:var(--wine);
+  }
+  #output .chord-badge.dragging{
+    opacity:0.35;
+  }
+  #output .meta{ color:var(--ink-dim); }
+  #output .placeholder{
+    color:var(--ink-dim);
+    font-family:'Inter',sans-serif;
+    font-style:italic;
+    font-size:14px;
+  }
+  button.copy-btn{
+    background:transparent;
+    border:1px solid var(--hairline);
+    color:var(--ink);
+    padding:6px 14px;
+    border-radius:20px;
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    font-weight:500;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    transition:border-color .15s, color .15s;
+  }
+  button.copy-btn:hover{
+    border-color:var(--gold);
+    color:var(--gold);
+  }
+  button.copy-btn.copied{
+    border-color:var(--gold);
+    color:var(--gold);
+    background:rgba(212,166,58,0.1);
+  }
+  ::selection{ background:rgba(212,166,58,0.25); }
+
+  @media (max-width: 860px){
+    body{ overflow-x:hidden; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Chord Sheet <span>Converter</span></h1>
+</header>
+
+<div class="controls">
+  <span style="font-size:12px;color:var(--ink-dim);">If a chord lands a syllable early/late, click it and nudge it into place.</span>
+  <div class="flag-badge" id="flagBadge" style="display:none;">
+    <span class="dot"></span><span id="flagCount">0</span> line(s) flagged for review
+  </div>
+</div>
+
+<div class="controls-row">
+  <label>Performance key
+    <input type="text" id="perfKey" placeholder="e.g. E" size="4">
+  </label>
+  <label>Capo line
+    <input type="text" id="capoLine" placeholder="e.g. 4 - Play C" size="16">
+  </label>
+  <label>YouTube video ID or URL
+    <input type="text" id="videoId" placeholder="e.g. GaMS0F0_xMI" size="22">
+  </label>
+  <span style="font-size:12px;color:var(--ink-dim);">leave any field blank to skip that block</span>
+</div>
+
+<div class="action-row">
+  <button type="button" class="toolbar-btn" id="undoBtn" title="Undo (Ctrl+Z)">&#8630; Undo</button>
+  <button type="button" class="toolbar-btn" id="redoBtn" title="Redo (Ctrl+Shift+Z)">&#8631; Redo</button>
+  <span class="action-sep"></span>
+  <button type="button" class="toolbar-btn" id="saveBtn" title="Save everything to this browser">&#128190; Save</button>
+  <span class="save-status" id="saveStatus"></span>
+  <button type="button" class="toolbar-btn danger" id="resetBtn" title="Clear everything and start fresh">&#8635; Reset</button>
+</div>
+
+<main>
+  <div class="pane pane-output">
+    <div class="pane-head">
+      <h2>Converted output</h2>
+      <button class="copy-btn" id="copyBtn">
+        <span id="copyLabel">Copy</span>
+      </button>
+    </div>
+    <div class="nudge-toolbar" id="nudgeToolbar">
+      <span class="nudge-label">Selected: <b id="nudgeChordName"></b></span>
+      <div class="nudge-btns">
+        <button type="button" data-action="word" data-dir="-1" title="Move a word left">&laquo;</button>
+        <button type="button" data-action="letter" data-dir="-1" title="Move a letter left">&lsaquo;</button>
+        <button type="button" data-action="letter" data-dir="1" title="Move a letter right">&rsaquo;</button>
+        <button type="button" data-action="word" data-dir="1" title="Move a word right">&raquo;</button>
+        <button type="button" data-action="deselect" title="Deselect (Esc)">&times;</button>
+      </div>
+      <span class="nudge-hint">&larr;/&rarr; = letter &middot; Shift+&larr;/&rarr; = word &middot; drag a badge to move it</span>
+    </div>
+    <div class="pane-body">
+      <div id="output" spellcheck="false"><div class="placeholder">Converted chord-sheet HTML will appear here.</div></div>
+    </div>
+  </div>
+
+  <div class="pane pane-input">
+    <div class="pane-head">
+      <h2>Legacy HTML</h2>
+    </div>
+    <div class="pane-body">
+      <textarea id="input" placeholder="Paste your exported <p>/<br> chord sheet HTML here…" spellcheck="false"></textarea>
+    </div>
+  </div>
+</main>
+
+<script>
+const CHORD_TOKEN = "[A-G](?:#|b)?(?:maj7|maj|min7|min|m7|m|sus2|sus4|sus|dim7|dim|aug|add\\d)?\\d*(?:\\/[A-G](?:#|b)?)?";
+const CHORD_LINE_RE = new RegExp("^[\\s*]*(?:" + CHORD_TOKEN + ")(?:[\\s*]+(?:" + CHORD_TOKEN + "))*[\\s*]*$");
+
+function findChords(line){
+  const re = new RegExp(CHORD_TOKEN, "g");
+  const out = [];
+  let m;
+  while((m = re.exec(line)) !== null){
+    out.push({chord:m[0], start:m.index});
+    if(re.lastIndex === m.index) re.lastIndex++;
+  }
+  return out;
+}
+
+const SECTION_LABEL_RE = /^(intro|interlude|outro|solo|turnaround|bridge|riff|tag|refrain|vamp|chorus|pre-chorus|prechorus|verse)\s*\d*\s*[:\-–]?\s*/i;
+const REPEAT_SUFFIX_RE = /\(?\s*(?:x\s*\d+|\d+\s*x)\s*\)?\s*$/i;
+
+// Lines like "Intro: G D Em C" or "Interlude - Am F C G (x2)" mix a section
+// label with bare chords on one line. CHORD_LINE_RE (and therefore
+// isChordLine) requires the *whole* line to be chords, so these used to
+// fail that test, fall into the plain-text branch, and silently lose their
+// chords. This pulls the label and any trailing repeat count (e.g. "(x2)")
+// off the line and checks whether what's left is pure chords.
+function parseLabeledChordLine(line){
+  const trimmed = line.trim();
+  const labelMatch = trimmed.match(SECTION_LABEL_RE);
+  if(!labelMatch) return null;
+  let rest = trimmed.slice(labelMatch[0].length).trim();
+  if(!rest) return null;
+  let repeatText = "";
+  const repeatMatch = rest.match(REPEAT_SUFFIX_RE);
+  if(repeatMatch){
+    repeatText = repeatMatch[0].trim();
+    rest = rest.slice(0, rest.length - repeatMatch[0].length).trim();
+  }
+  if(!rest) return null;
+  rest = normalizeChordSeparators(rest).trim();
+  if(!rest) return null;
+  if(!CHORD_LINE_RE.test(rest)) return null;
+  const chords = findChords(rest);
+  if(chords.length === 0) return null;
+  const label = labelMatch[0].trim().replace(/[:\-–]\s*$/, "").trim();
+  return { label, chords: chords.map(c => c.chord), repeatText };
+}
+
+function decodeHtmlEntities(str){
+  const ta = document.createElement("textarea");
+  ta.innerHTML = str;
+  return ta.value;
+}
+
+function htmlToLines(html){
+  let text = html.replace(/<br\s*\/?>/gi, "\n");
+  text = text.replace(/<\/p>/gi, "\n");
+  text = text.replace(/<iframe[\s\S]*?<\/iframe>/gi, "");
+  text = text.replace(/<[^>]+>/g, "");
+  text = decodeHtmlEntities(text);
+  text = text.replace(/\u00A0/g, " ");
+  return text.split("\n").filter(l => l.trim() !== "");
+}
+
+// Legacy posts sometimes separate intro/interlude chords with bar lines
+// ("G | Bm7 | Em | Cadd9") instead of plain spaces, and copy/paste often
+// flattens the "|" character down to a lowercase "l" ("G l Bm7 l Em").
+// Neither is part of a chord name, so collapse both to whitespace before
+// any chord-line test or width-based alignment sees them.
+function normalizeChordSeparators(s){
+  return s.replace(/\|/g, " ").replace(/(^|\s)l(?=\s|$)/g, " ");
+}
+
+function isChordLine(line){
+  const trimmed = line.trim();
+  if(!trimmed) return false;
+  const s = normalizeChordSeparators(trimmed).trim();
+  if(!s) return false;
+  return CHORD_LINE_RE.test(s) && findChords(s).length > 0;
+}
+
+function cwidth(ch, cjkWidth){
+  return ch.codePointAt(0) > 0x2E80 ? cjkWidth : 1;
+}
+
+function escapeHtml(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+let nextChordId = 1;
+
+function computeWordStarts(chars){
+  const wordStarts = [];
+  for(let i=0;i<chars.length;i++){
+    if(i===0 ? !/\s/.test(chars[0]) : (/\s/.test(chars[i-1]) && !/\s/.test(chars[i]))) wordStarts.push(i);
+  }
+  if(wordStarts.length === 0) wordStarts.push(0);
+  return wordStarts;
+}
+
+function mergeLine(chordLine, lyricLine, cjkWidth){
+  const chords = findChords(chordLine);
+  const chars = Array.from(lyricLine);
+  const wordStarts = computeWordStarts(chars);
+
+  if(chords.length === 0){
+    return {chars, wordStarts, chords: [], flagged:false};
+  }
+  if(chars.length === 0){
+    return {chars, wordStarts, chords: chords.map(c => ({id: nextChordId++, chord:c.chord, pos:0})), flagged:false};
+  }
+
+  const cum = [0];
+  for(const ch of chars) cum.push(cum[cum.length-1] + cwidth(ch, cjkWidth));
+
+  const hasCJK = chars.some(ch => ch.codePointAt(0) > 0x2E80);
+
+  if(hasCJK){
+    const assigned = [];
+    let ci = 0;
+    for(let idx=0; idx<chars.length; idx++){
+      while(ci < chords.length && chords[ci].start < cum[idx+1]){
+        assigned.push({id: nextChordId++, chord: chords[ci].chord, pos: idx});
+        ci++;
+      }
+    }
+    let flagged = false;
+    while(ci < chords.length){
+      assigned.push({id: nextChordId++, chord: chords[ci].chord, pos: chars.length});
+      ci++;
+      flagged = true;
+    }
+    return {chars, wordStarts, chords: assigned, flagged};
+  }
+
+  const chordChars = Array.from(chordLine);
+  const chordCum = [0];
+  for(const ch of chordChars) chordCum.push(chordCum[chordCum.length-1] + cwidth(ch, cjkWidth));
+  const chordLineWidth = chordCum[chordCum.length-1] || 1;
+  const lyricLineWidth = cum[cum.length-1];
+
+  const assigned = [];
+  const seenPos = new Map();
+  let flagged = false;
+  for(const c of chords){
+    const target = (chordCum[c.start] / chordLineWidth) * lyricLineWidth;
+    let best = wordStarts[0];
+    let bestDist = Math.abs(cum[best] - target);
+    for(const ws of wordStarts){
+      const d = Math.abs(cum[ws] - target);
+      if(d < bestDist){ bestDist = d; best = ws; }
+    }
+    assigned.push({id: nextChordId++, chord: c.chord, pos: best});
+    seenPos.set(best, (seenPos.get(best) || 0) + 1);
+    if(seenPos.get(best) > 1) flagged = true;
+  }
+  return {chars, wordStarts, chords: assigned, flagged};
+}
+
+const KEY_LINE_RE = /^key\s*:/i;
+const CAPO_LINE_RE = /^capo\b/i;
+const SONGWRITER_LINE_RE = /^(词曲|作词作曲|词|曲|作词|作曲|lyrics?|music)\s*[:：]/i;
+
+function convert(html, cjkWidth){
+  let lines = htmlToLines(html);
+  const results = [];
+  let i = 0;
+  let composerLine = "";
+  let detectedKey = "";
+  let detectedCapo = "";
+  let detectedSongwriter = "";
+
+  const isKeyOrCapoLine = (line) => {
+    const t = line.trim();
+    return KEY_LINE_RE.test(t) || CAPO_LINE_RE.test(t);
+  };
+
+  // A songwriter credit line (e.g. "词:王泽言, 张远; 曲:王泽言") can sit
+  // anywhere among the leading title/tag lines above the real chord
+  // content. Pull it out here so it lands in the header above "Key:"
+  // instead of falling through and getting parsed as a stray lyric line.
+  for(let idx = 0; idx < lines.length; idx++){
+    const candidate = lines[idx];
+    if(isChordLine(candidate) || parseLabeledChordLine(candidate) || isKeyOrCapoLine(candidate)) break;
+    if(SONGWRITER_LINE_RE.test(candidate.trim())){
+      detectedSongwriter = candidate.trim();
+      lines = lines.slice(0, idx).concat(lines.slice(idx + 1));
+      break;
+    }
+  }
+
+  if(lines.length > 0 && !isChordLine(lines[0]) && !isKeyOrCapoLine(lines[0]) && !parseLabeledChordLine(lines[0])){
+    composerLine = lines[0];
+    i = 1;
+  }
+  while(i < lines.length){
+    const line = lines[i];
+    const trimmed = line.trim();
+    let entry;
+    if(KEY_LINE_RE.test(trimmed)){
+      if(!detectedKey) detectedKey = trimmed.replace(/^key\s*:\s*/i, "").trim();
+      i += 1;
+      continue;
+    }
+    if(CAPO_LINE_RE.test(trimmed)){
+      if(!detectedCapo) detectedCapo = trimmed;
+      i += 1;
+      continue;
+    }
+    const labeled = parseLabeledChordLine(line);
+    if(labeled){
+      const labelPrefix = labeled.label + ": ";
+      const repeatSuffix = labeled.repeatText ? " " + labeled.repeatText : "";
+      const chars = Array.from(labelPrefix + repeatSuffix);
+      const chords = labeled.chords.map(ch => ({id: nextChordId++, chord: ch, pos: labelPrefix.length}));
+      entry = {chars, wordStarts: computeWordStarts(chars), chords, flagged: true};
+      i += 1;
+    } else if(isChordLine(line) && i+1 < lines.length && !isChordLine(lines[i+1])){
+      entry = mergeLine(normalizeChordSeparators(line), lines[i+1], cjkWidth);
+      i += 2;
+    } else if(isChordLine(line)){
+      const chords = findChords(normalizeChordSeparators(line)).map(c => ({id: nextChordId++, chord:c.chord, pos:0}));
+      entry = {chars: [], wordStarts:[0], chords, flagged: chords.length > 0};
+      i += 1;
+    } else {
+      entry = {chars: Array.from(line), wordStarts: computeWordStarts(Array.from(line)), chords: [], flagged:false};
+      i += 1;
+    }
+    results.push(entry);
+  }
+  return {composerLi
