@@ -462,8 +462,9 @@
 </main>
 
 <script>
-const CHORD_TOKEN = "[A-G](?:#|b)?(?:maj13|maj9|maj7|maj|min7|min9|min|m7b5|m9|m7|m6|m|sus2|sus4|sus|dim7|dim|aug|add13|add11|add9|add4|add2|add\\d)?\\d*(?:\\(?[#b]\\d{1,2}\\)?)*(?:\\/[A-G](?:#|b)?)?";
-const CHORD_LINE_RE = new RegExp("^[\\s*]*(?:" + CHORD_TOKEN + ")(?:[\\s*]+(?:" + CHORD_TOKEN + "))*[\\s*]*$");
+const CHORD_QUALITY = "(?:maj13|maj9|maj7|maj|min7|min9|min|m7b5|m9|m7|m6|m|sus2|sus4|sus|dim7|dim|aug|add13|add11|add9|add4|add2|add\\d)";
+const CHORD_TOKEN = "[A-G](?:#|b)?(?:\\d{1,2})?" + CHORD_QUALITY + "?\\d*(?:\\(?[#b]\\d{1,2}\\)?)*(?:\\/[A-G](?:#|b)?)?";
+const CHORD_LINE_RE = new RegExp("^[\\s*()]*(?:" + CHORD_TOKEN + ")(?:[\\s*()]+(?:" + CHORD_TOKEN + "))*[\\s*()]*$");
 
 function findChords(line){
   const re = new RegExp(CHORD_TOKEN, "g");
