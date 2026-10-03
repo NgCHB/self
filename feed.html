@@ -123,25 +123,28 @@ details input,details select{width:100%;margin-top:4px}
   var PRESETS=[
     ["JustinGuitar","🎸 Fingerstyle","https://www.justinguitar.com","https://www.justinguitar.com/feed.rss"],
     ["Acoustic Guitar","🎸 Acoustic guitar","https://acousticguitar.com","https://acousticguitar.com/feed/"],
-    ["RSC Education","🧪 Chemistry education","https://edu.rsc.org","https://edu.rsc.org"],
-    ["AI for Education","🤖 AI education","https://www.aiforeducation.io","https://www.aiforeducation.io"],
     ["Quanta Magazine","🔬 Science","https://www.quantamagazine.org","https://www.quantamagazine.org/feed/"],
-    ["Chemistry World","🧪 Chemistry discoveries","https://www.chemistryworld.com","https://www.chemistryworld.com/413.rss"],
     ["Android Authority","📱 Android","https://www.androidauthority.com","https://www.androidauthority.com/feed/"],
     ["Farnam Street","🧠 Personal development","https://fs.blog","https://fs.blog/feed/"],
     ["Four Minute Books","📚 Books","https://fourminutebooks.com","https://fourminutebooks.com/feed/"],
     ["Ness Labs","🧠 Learning/thinking","https://nesslabs.com","https://nesslabs.com/feed"],
-    ["The Buddhist Society","🪷 Buddhism","https://thebuddhistsociety.org","https://thebuddhistsociety.org"],
-    ["UCLA Mindful","🧘 Meditation","https://www.uclahealth.org/programs/uclamindful","https://www.uclahealth.org/programs/uclamindful"],
-    ["NHS Better Health","❤️ Health & wellbeing","https://www.nhs.uk/better-health/","https://www.nhs.uk/better-health/"]
+    ["Lion's Roar","🪷 Buddhism","https://www.lionsroar.com","https://www.lionsroar.com/feed/"],
+    ["Mindful","🧘 Meditation","https://www.mindful.org","https://www.mindful.org/feed/"],
+    ["Harvard Health","❤️ Health & wellbeing","https://www.health.harvard.edu","https://www.health.harvard.edu/blog/feed"],
+    ["One Useful Thing","🤖 AI education","https://www.oneusefulthing.org","https://www.oneusefulthing.org/feed"],
+    ["Compound Interest","🧪 Chemistry education","https://www.compoundchem.com","https://www.compoundchem.com/feed/"],
+    ["ScienceDaily Chemistry","🧪 Chemistry discoveries","https://www.sciencedaily.com/news/matter_energy/chemistry/","https://www.sciencedaily.com/rss/matter_energy/chemistry.xml"]
   ];
+  var RETIRED=["https://thebuddhistsociety.org","https://www.uclahealth.org/programs/uclamindful","https://www.nhs.uk/better-health/","https://www.aiforeducation.io","https://edu.rsc.org","https://www.chemistryworld.com"];
   function seed(){
+    S.sources=S.sources.filter(function(x){return RETIRED.indexOf(x.site)<0});
+    S.items=S.items.filter(function(i){return S.sources.some(function(x){return x.url===i.src})});
     PRESETS.forEach(function(p){
       var ex=S.sources.filter(function(s){return s.site===p[2]||s.url===p[3]})[0];
       if(ex){ex.feedUrl=p[3];ex.site=p[2];return}
       S.sources.push({url:p[3],feedUrl:p[3],site:p[2],name:p[0],cat:p[1]});
     });
-    S.seeded=true;S.seedVer=3;save();
+    S.seeded=true;S.seedVer=4;save();
   }
   function id(i){return i.src+"|"+(i.link||i.title)}
   function status(t,err){var s=$("status");s.textContent=t||"";s.className="status"+(err?" err":"")}
@@ -351,7 +354,7 @@ details input,details select{width:100%;margin-top:4px}
   $("markAll").onclick=function(){S.items.forEach(function(i){if((!S.src||i.src===S.src)&&(!S.cat||i.cat===S.cat))S.read[id(i)]=1});save();render();status("Marked as read.")};
   $("restore").onclick=function(){seed();render();refresh()};
   $("clear").onclick=function(){if(confirm("Remove all sources, saved posts and settings?")){try{localStorage.removeItem("dailyfeed")}catch(e){}S.sources=[];S.items=[];S.read={};S.saved={};S.src=S.cat=null;render();status("Reset.")}};
-  var first=S.seedVer!==3;if(first)seed();
+  var first=S.seedVer!==4;if(first)seed();
   setAuto();render();
   if(first||(S.sources.length&&!S.items.length))refresh();
 })();
