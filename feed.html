@@ -130,12 +130,12 @@ details input,details select{width:100%;margin-top:4px}
     ["Ness Labs","🧠 Learning/thinking","https://nesslabs.com","https://nesslabs.com/feed"],
     ["Lion's Roar","🪷 Buddhism","https://www.lionsroar.com","https://www.lionsroar.com/feed/"],
     ["Mindful","🧘 Meditation","https://www.mindful.org","https://www.mindful.org/feed/"],
-    ["Cleveland Clinic","❤️ Health & wellbeing","https://health.clevelandclinic.org","https://health.clevelandclinic.org/feed"],
+    ["Mark's Daily Apple","❤️ Health & wellbeing","https://www.marksdailyapple.com","https://www.marksdailyapple.com/feed/"],
     ["One Useful Thing","🤖 AI education","https://www.oneusefulthing.org","https://www.oneusefulthing.org/feed"],
     ["Compound Interest","🧪 Chemistry education","https://www.compoundchem.com","https://www.compoundchem.com/feed/"],
     ["ScienceDaily Chemistry","🧪 Chemistry discoveries","https://www.sciencedaily.com/news/matter_energy/chemistry/","https://www.sciencedaily.com/rss/matter_energy/chemistry.xml"]
   ];
-  var RETIRED=["https://thebuddhistsociety.org","https://www.uclahealth.org/programs/uclamindful","https://www.nhs.uk/better-health/","https://www.aiforeducation.io","https://edu.rsc.org","https://www.chemistryworld.com","https://www.health.harvard.edu"];
+  var RETIRED=["https://thebuddhistsociety.org","https://www.uclahealth.org/programs/uclamindful","https://www.nhs.uk/better-health/","https://www.aiforeducation.io","https://edu.rsc.org","https://www.chemistryworld.com","https://www.health.harvard.edu","https://health.clevelandclinic.org"];
   function seed(){
     S.sources=S.sources.filter(function(x){return RETIRED.indexOf(x.site)<0});
     S.items=S.items.filter(function(i){return S.sources.some(function(x){return x.url===i.src})});
@@ -144,7 +144,7 @@ details input,details select{width:100%;margin-top:4px}
       if(ex){ex.feedUrl=p[3];ex.site=p[2];return}
       S.sources.push({url:p[3],feedUrl:p[3],site:p[2],name:p[0],cat:p[1]});
     });
-    S.seeded=true;S.seedVer=5;save();
+    S.seeded=true;S.seedVer=6;save();
   }
   function id(i){return i.src+"|"+(i.link||i.title)}
   function status(t,err){var s=$("status");s.textContent=t||"";s.className="status"+(err?" err":"")}
@@ -354,7 +354,7 @@ details input,details select{width:100%;margin-top:4px}
   $("markAll").onclick=function(){S.items.forEach(function(i){if((!S.src||i.src===S.src)&&(!S.cat||i.cat===S.cat))S.read[id(i)]=1});save();render();status("Marked as read.")};
   $("restore").onclick=function(){seed();render();refresh()};
   $("clear").onclick=function(){if(confirm("Remove all sources, saved posts and settings?")){try{localStorage.removeItem("dailyfeed")}catch(e){}S.sources=[];S.items=[];S.read={};S.saved={};S.src=S.cat=null;render();status("Reset.")}};
-  var first=S.seedVer!==5;if(first)seed();
+  var first=S.seedVer!==6;if(first)seed();
   setAuto();render();
   if(first||(S.sources.length&&!S.items.length))refresh();
 })();
