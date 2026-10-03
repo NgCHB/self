@@ -126,7 +126,7 @@ details input,details select{width:100%;margin-top:4px}
     ["RSC Education","🧪 Chemistry education","https://edu.rsc.org","https://edu.rsc.org"],
     ["AI for Education","🤖 AI education","https://www.aiforeducation.io","https://www.aiforeducation.io"],
     ["Quanta Magazine","🔬 Science","https://www.quantamagazine.org","https://www.quantamagazine.org/feed/"],
-    ["Chemistry World","🧪 Chemistry discoveries","https://www.chemistryworld.com","https://www.chemistryworld.com"],
+    ["Chemistry World","🧪 Chemistry discoveries","https://www.chemistryworld.com","https://www.chemistryworld.com/413.rss"],
     ["Android Authority","📱 Android","https://www.androidauthority.com","https://www.androidauthority.com/feed/"],
     ["Farnam Street","🧠 Personal development","https://fs.blog","https://fs.blog/feed/"],
     ["Four Minute Books","📚 Books","https://fourminutebooks.com","https://fourminutebooks.com/feed/"],
@@ -137,10 +137,11 @@ details input,details select{width:100%;margin-top:4px}
   ];
   function seed(){
     PRESETS.forEach(function(p){
-      if(S.sources.some(function(s){return s.url===p[3]}))return;
+      var ex=S.sources.filter(function(s){return s.site===p[2]||s.url===p[3]})[0];
+      if(ex){ex.feedUrl=p[3];ex.site=p[2];return}
       S.sources.push({url:p[3],feedUrl:p[3],site:p[2],name:p[0],cat:p[1]});
     });
-    S.seeded=true;S.seedVer=2;save();
+    S.seeded=true;S.seedVer=3;save();
   }
   function id(i){return i.src+"|"+(i.link||i.title)}
   function status(t,err){var s=$("status");s.textContent=t||"";s.className="status"+(err?" err":"")}
@@ -182,8 +183,13 @@ details input,details select{width:100%;margin-top:4px}
     var doc=new DOMParser().parseFromString(txt,"text/html");
     var l=doc.querySelector('link[rel="alternate"][type*="rss"],link[rel="alternate"][type*="atom"]');
     if(l&&l.getAttribute("href")){var f=new URL(l.getAttribute("href"),u).href;return{feedUrl:f,text:await getText(f)}}
-    var base=new URL(u).origin,p=["/feed","/rss","/feed.xml","/rss.xml","/atom.xml","/index.xml"];
-    for(var i=0;i<p.length;i++){try{var t=await getText(base+p[i]);if(isFeed(t))return{feedUrl:base+p[i],text:t}}catch(e){}}
+    var base=new URL(u).origin,p=["/feed","/feed/","/rss","/feed.xml","/rss.xml","/atom.xml","/index.xml","/blog/feed","/blog/rss.xml","/news/feed"],page="";
+    for(var i=0;i<p.length;i++){try{var t=await getText(base+p[i]);if(isFeed(t))return{feedUrl:base+p[i],text:t};if(p[i]==="/rss")page=t}catch(e){}}
+    if(page){
+      var d2=new DOMParser().parseFromString(page,"text/html");
+      var ls=Array.from(d2.querySelectorAll("a[href]")).map(function(a){return a.getAttribute("href")}).filter(function(h){return /\.rss(\?|$)|\/rss|\/feed/i.test(h)}).slice(0,6);
+      for(var j=0;j<ls.length;j++){try{var fu=new URL(ls[j],base).href,t2=await getText(fu);if(isFeed(t2))return{feedUrl:fu,text:t2}}catch(e){}}
+    }
     throw new Error("No feed found");
   }
   function clean(h){
@@ -235,13 +241,13 @@ details input,details select{width:100%;margin-top:4px}
     async function worker(){
       while(queue.length){
         var src=queue.shift();
-        try{var its=await fetchItems(src);its.forEach(function(i){i.source=src.name});merge(src,its);save();render()}catch(e){fail++}
+        try{var its=await fetchItems(src);its.forEach(function(i){i.source=src.name});src.err=false;merge(src,its);save();render()}catch(e){fail++;src.err=true}
         done++;if(!quiet)status("Refreshing… "+done+" of "+(done+queue.length));
       }
     }
     await Promise.all([worker(),worker(),worker()]);
     save();render();$("refresh").disabled=false;
-    status(fail?fail+" source(s) failed to refresh.":"Updated "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),!!fail);
+    status(fail?fail+" failed: "+S.sources.filter(function(x){return x.err}).map(function(x){return x.name}).join(", "):"Updated "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),!!fail);
   }
   function setAuto(){clearInterval(timer);if(+S.auto)timer=setInterval(function(){refresh(true)},S.auto*6e4)}
 
@@ -277,7 +283,7 @@ details input,details select{width:100%;margin-top:4px}
     // sources
     var ch=$("chips");ch.innerHTML="";
     S.sources.filter(function(s){return !S.cat||s.cat===S.cat}).forEach(function(s){
-      var c=el("button","chip"+(S.src===s.url?" on":""),s.name);
+      var c=el("button","chip"+(S.src===s.url?" on":""),(s.err?"⚠ ":"")+s.name);if(s.err)c.title="Could not load this feed";
       var n=unread(function(i){return i.src===s.url});if(n)c.appendChild(el("span","n",n));
       c.onclick=function(){S.src=S.src===s.url?null:s.url;render()};
       var x=el("i",null,"✕");x.title="Remove";
@@ -345,7 +351,7 @@ details input,details select{width:100%;margin-top:4px}
   $("markAll").onclick=function(){S.items.forEach(function(i){if((!S.src||i.src===S.src)&&(!S.cat||i.cat===S.cat))S.read[id(i)]=1});save();render();status("Marked as read.")};
   $("restore").onclick=function(){seed();render();refresh()};
   $("clear").onclick=function(){if(confirm("Remove all sources, saved posts and settings?")){try{localStorage.removeItem("dailyfeed")}catch(e){}S.sources=[];S.items=[];S.read={};S.saved={};S.src=S.cat=null;render();status("Reset.")}};
-  var first=S.seedVer!==2;if(first)seed();
+  var first=S.seedVer!==3;if(first)seed();
   setAuto();render();
   if(first||(S.sources.length&&!S.items.length))refresh();
 })();
