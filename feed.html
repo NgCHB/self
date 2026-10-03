@@ -130,21 +130,48 @@ details input,details select{width:100%;margin-top:4px}
     ["Android Authority","📱 Android","https://www.androidauthority.com","https://www.androidauthority.com/feed/"],
     ["Farnam Street","🧠 Personal development","https://fs.blog","https://fs.blog/feed/"],
     ["Four Minute Books","📚 Books","https://fourminutebooks.com","https://fourminutebooks.com/feed/"],
-    ["Ness Labs","🧠 Learning/thinking","https://nesslabs.com","https://nesslabs.com/feed"]
+    ["Ness Labs","🧠 Learning/thinking","https://nesslabs.com","https://nesslabs.com/feed"],
+    ["The Buddhist Society","🪷 Buddhism","https://thebuddhistsociety.org","https://thebuddhistsociety.org"],
+    ["UCLA Mindful","🧘 Meditation","https://www.uclahealth.org/programs/uclamindful","https://www.uclahealth.org/programs/uclamindful"],
+    ["NHS Better Health","❤️ Health & wellbeing","https://www.nhs.uk/better-health/","https://www.nhs.uk/better-health/"]
   ];
   function seed(){
     PRESETS.forEach(function(p){
       if(S.sources.some(function(s){return s.url===p[3]}))return;
       S.sources.push({url:p[3],feedUrl:p[3],site:p[2],name:p[0],cat:p[1]});
     });
-    S.seeded=true;save();
+    S.seeded=true;S.seedVer=2;save();
   }
   function id(i){return i.src+"|"+(i.link||i.title)}
   function status(t,err){var s=$("status");s.textContent=t||"";s.className="status"+(err?" err":"")}
 
+  async function fetchT(u,ms){
+    var c=new AbortController(),t=setTimeout(function(){c.abort()},ms||9000);
+    try{return await fetch(u,{signal:c.signal})}finally{clearTimeout(t)}
+  }
   async function getText(u){
-    try{var r=await fetch(u);if(!r.ok)throw 0;return await r.text()}
-    catch(e){var r2=await fetch(S.proxy+encodeURIComponent(u));if(!r2.ok)throw new Error("HTTP "+r2.status);return await r2.text()}
+    var tries=[u];
+    [S.proxy,"https://corsproxy.io/?url=","https://api.codetabs.com/v1/proxy?quest=",DP].forEach(function(p){
+      if(p&&tries.indexOf(p+encodeURIComponent(u))<0)tries.push(p+encodeURIComponent(u));
+    });
+    for(var i=0;i<tries.length;i++){
+      try{var r=await fetchT(tries[i]);if(!r.ok)continue;var t=await r.text();if(t&&t.length>50)return t}catch(e){}
+    }
+    throw new Error("All fetch routes failed");
+  }
+  async function viaJson(s){
+    var r=await fetchT("https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(s.feedUrl),12000);
+    var j=await r.json();
+    if(j.status!=="ok"||!j.items||!j.items.length)throw 0;
+    return j.items.slice(0,30).map(function(i){
+      var raw=i.description||i.content||"";
+      return{src:s.url,source:s.name,cat:s.cat||"",title:(i.title||"").trim(),link:i.link||"",date:Date.parse((i.pubDate||"").replace(" ","T")+"Z")||Date.now(),sum:clean(raw),img:i.thumbnail||(i.enclosure&&i.enclosure.link)||"",mins:Math.max(1,Math.round(raw.replace(/<[^>]*>/g," ").split(/\s+/).length/220))};
+    });
+  }
+  async function fetchItems(s){
+    try{var p=parse(await getText(s.feedUrl),s);if(p.items.length)return p.items}catch(e){}
+    if(s.site){try{var r=await resolveFeed(s.site);s.feedUrl=r.feedUrl;var p2=parse(r.text,s);if(p2.items.length)return p2.items}catch(e){}}
+    return await viaJson(s);
   }
   function isFeed(t){return /<(rss|feed|rdf:RDF)[\s>]/i.test(t.slice(0,2000))}
   function norm(u){u=u.trim();return /^https?:\/\//i.test(u)?u:"https://"+u}
@@ -204,15 +231,15 @@ details input,details select{width:100%;margin-top:4px}
   async function refresh(quiet){
     if(!S.sources.length){if(!quiet)status("Add a site first.");return}
     $("refresh").disabled=true;if(!quiet)status("Refreshing…");var fail=0;
-    await Promise.all(S.sources.map(async function(s){
-      if(s.demo)return;
-      try{
-        var p;
-        try{p=parse(await getText(s.feedUrl),s);if(!p.items.length)throw 0}
-        catch(e){if(!s.site)throw e;var r=await resolveFeed(s.site);s.feedUrl=r.feedUrl;p=parse(r.text,s)}
-        p.items.forEach(function(i){i.source=s.name});merge(s,p.items);
-      }catch(e){fail++}
-    }));
+    var queue=S.sources.filter(function(x){return !x.demo}),done=0;
+    async function worker(){
+      while(queue.length){
+        var src=queue.shift();
+        try{var its=await fetchItems(src);its.forEach(function(i){i.source=src.name});merge(src,its);save();render()}catch(e){fail++}
+        done++;if(!quiet)status("Refreshing… "+done+" of "+(done+queue.length));
+      }
+    }
+    await Promise.all([worker(),worker(),worker()]);
     save();render();$("refresh").disabled=false;
     status(fail?fail+" source(s) failed to refresh.":"Updated "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),!!fail);
   }
@@ -318,7 +345,7 @@ details input,details select{width:100%;margin-top:4px}
   $("markAll").onclick=function(){S.items.forEach(function(i){if((!S.src||i.src===S.src)&&(!S.cat||i.cat===S.cat))S.read[id(i)]=1});save();render();status("Marked as read.")};
   $("restore").onclick=function(){seed();render();refresh()};
   $("clear").onclick=function(){if(confirm("Remove all sources, saved posts and settings?")){try{localStorage.removeItem("dailyfeed")}catch(e){}S.sources=[];S.items=[];S.read={};S.saved={};S.src=S.cat=null;render();status("Reset.")}};
-  var first=!S.seeded;if(first)seed();
+  var first=S.seedVer!==2;if(first)seed();
   setAuto();render();
   if(first||(S.sources.length&&!S.items.length))refresh();
 })();
