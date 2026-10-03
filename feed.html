@@ -98,7 +98,7 @@ details input,details select{width:100%;margin-top:4px}
       <select id="auto"><option value="0">Off</option><option value="5">Every 5 min</option><option value="15">Every 15 min</option><option value="60">Every hour</option></select></label>
     <label>Sort
       <select id="sort"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="src">By source</option></select></label>
-    <p><button id="clear">Reset all data</button></p>
+    <p><button id="restore">Restore starter sources</button> <button id="clear">Reset all data</button></p>
   </details>
 </div>
 
@@ -106,7 +106,7 @@ details input,details select{width:100%;margin-top:4px}
 (function(){
   var $=function(i){return document.getElementById(i)};
   var DP="https://api.allorigins.win/raw?url=";
-  var S={sources:[],items:[],read:{},saved:{},proxy:DP,tab:"all",src:null,cat:null,sort:"new",auto:0,compact:false,theme:""};
+  var S={sources:[],items:[],read:{},saved:{},proxy:DP,tab:"all",src:null,cat:null,sort:"new",auto:0,compact:false,theme:"",seeded:false};
   var timer=null;
 
   function load(){
@@ -119,6 +119,25 @@ details input,details select{width:100%;margin-top:4px}
       var o={};for(var k in S)o[k]=S[k];o.items=keep.concat(rest);
       localStorage.setItem("dailyfeed",JSON.stringify(o));
     }catch(e){}
+  }
+  var PRESETS=[
+    ["JustinGuitar","🎸 Fingerstyle","https://www.justinguitar.com","https://www.justinguitar.com/feed.rss"],
+    ["Acoustic Guitar","🎸 Acoustic guitar","https://acousticguitar.com","https://acousticguitar.com/feed/"],
+    ["RSC Education","🧪 Chemistry education","https://edu.rsc.org","https://edu.rsc.org"],
+    ["AI for Education","🤖 AI education","https://www.aiforeducation.io","https://www.aiforeducation.io"],
+    ["Quanta Magazine","🔬 Science","https://www.quantamagazine.org","https://www.quantamagazine.org/feed/"],
+    ["Chemistry World","🧪 Chemistry discoveries","https://www.chemistryworld.com","https://www.chemistryworld.com"],
+    ["Android Authority","📱 Android","https://www.androidauthority.com","https://www.androidauthority.com/feed/"],
+    ["Farnam Street","🧠 Personal development","https://fs.blog","https://fs.blog/feed/"],
+    ["Four Minute Books","📚 Books","https://fourminutebooks.com","https://fourminutebooks.com/feed/"],
+    ["Ness Labs","🧠 Learning/thinking","https://nesslabs.com","https://nesslabs.com/feed"]
+  ];
+  function seed(){
+    PRESETS.forEach(function(p){
+      if(S.sources.some(function(s){return s.url===p[3]}))return;
+      S.sources.push({url:p[3],feedUrl:p[3],site:p[2],name:p[0],cat:p[1]});
+    });
+    S.seeded=true;save();
   }
   function id(i){return i.src+"|"+(i.link||i.title)}
   function status(t,err){var s=$("status");s.textContent=t||"";s.className="status"+(err?" err":"")}
@@ -187,7 +206,12 @@ details input,details select{width:100%;margin-top:4px}
     $("refresh").disabled=true;if(!quiet)status("Refreshing…");var fail=0;
     await Promise.all(S.sources.map(async function(s){
       if(s.demo)return;
-      try{var p=parse(await getText(s.feedUrl),s);p.items.forEach(function(i){i.source=s.name});merge(s,p.items)}catch(e){fail++}
+      try{
+        var p;
+        try{p=parse(await getText(s.feedUrl),s);if(!p.items.length)throw 0}
+        catch(e){if(!s.site)throw e;var r=await resolveFeed(s.site);s.feedUrl=r.feedUrl;p=parse(r.text,s)}
+        p.items.forEach(function(i){i.source=s.name});merge(s,p.items);
+      }catch(e){fail++}
     }));
     save();render();$("refresh").disabled=false;
     status(fail?fail+" source(s) failed to refresh.":"Updated "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),!!fail);
@@ -255,8 +279,8 @@ details input,details select{width:100%;margin-top:4px}
     var f=$("feed");f.innerHTML="";
     if(!list.length){
       var e=el("div","empty");
-      e.appendChild(el("p",null,!S.sources.length?"Your feed is empty. Add a website above to start.":S.tab==="saved"?"Nothing saved yet. Tap ☆ on a post.":S.tab==="unread"?"You're all caught up.":"No posts match."));
-      if(!S.sources.length){var b=el("button","pri","Load demo sources");b.onclick=demo;e.appendChild(b)}
+      e.appendChild(el("p",null,!S.items.length?(S.sources.length?"No posts loaded yet. Tap Refresh to fetch your sources.":"Your feed is empty. Add a website above to start."):S.tab==="saved"?"Nothing saved yet. Tap ☆ on a post.":S.tab==="unread"?"You're all caught up.":"No posts match."));
+      if(!S.items.length){var b=el("button","pri","Load demo posts");b.onclick=demo;e.appendChild(b)}
       f.appendChild(e);return;
     }
     list.forEach(function(i){
@@ -292,8 +316,11 @@ details input,details select{width:100%;margin-top:4px}
   $("theme").onclick=function(){var dark=S.theme?S.theme==="dark":matchMedia("(prefers-color-scheme:dark)").matches;S.theme=dark?"light":"dark";save();render()};
   $("view").onclick=function(){S.compact=!S.compact;save();render()};
   $("markAll").onclick=function(){S.items.forEach(function(i){if((!S.src||i.src===S.src)&&(!S.cat||i.cat===S.cat))S.read[id(i)]=1});save();render();status("Marked as read.")};
+  $("restore").onclick=function(){seed();render();refresh()};
   $("clear").onclick=function(){if(confirm("Remove all sources, saved posts and settings?")){try{localStorage.removeItem("dailyfeed")}catch(e){}S.sources=[];S.items=[];S.read={};S.saved={};S.src=S.cat=null;render();status("Reset.")}};
+  var first=!S.seeded;if(first)seed();
   setAuto();render();
+  if(first||(S.sources.length&&!S.items.length))refresh();
 })();
 </script>
 </body>
