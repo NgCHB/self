@@ -106,7 +106,7 @@ details input,details select{width:100%;margin-top:4px}
 (function(){
   var $=function(i){return document.getElementById(i)};
   var DP="https://api.allorigins.win/raw?url=";
-  var S={sources:[],items:[],read:{},saved:{},proxy:DP,tab:"all",src:null,cat:null,sort:"new",auto:0,compact:false,theme:"",seeded:false};
+  var S={sources:[],items:[],read:{},saved:{},proxy:DP,tab:"all",src:null,cat:null,sort:"new",auto:0,compact:false,theme:"",seeded:false,dead:[]};
   var timer=null;
 
   function load(){
@@ -121,30 +121,47 @@ details input,details select{width:100%;margin-top:4px}
     }catch(e){}
   }
   var PRESETS=[
-    ["JustinGuitar","🎸 Fingerstyle","https://www.justinguitar.com","https://www.justinguitar.com/feed.rss"],
-    ["Acoustic Guitar","🎸 Acoustic guitar","https://acousticguitar.com","https://acousticguitar.com/feed/"],
+    ["Acoustic Guitar","🎸 Guitar","https://acousticguitar.com","https://acousticguitar.com/feed/"],
+    ["Guitar World","🎸 Guitar","https://www.guitarworld.com","https://www.guitarworld.com/feeds.xml",1],
+    ["Premier Guitar","🎸 Guitar","https://www.premierguitar.com","https://www.premierguitar.com",1],
+    ["Compound Interest","🧪 Chemistry","https://www.compoundchem.com","https://www.compoundchem.com/feed/"],
+    ["ScienceDaily Chemistry","🧪 Chemistry","https://www.sciencedaily.com/news/matter_energy/chemistry/","https://www.sciencedaily.com/rss/matter_energy/chemistry.xml"],
+    ["One Useful Thing","🤖 AI & Education","https://www.oneusefulthing.org","https://www.oneusefulthing.org/feed"],
+    ["Edutopia","🤖 AI & Education","https://www.edutopia.org","https://www.edutopia.org/rss.xml",1],
+    ["Google for Education","🤖 AI & Education","https://blog.google/outreach-initiatives/education/","https://blog.google/outreach-initiatives/education/rss/",1],
+    ["TeachAI","🤖 AI & Education","https://teachai.org","https://teachai.org",1],
     ["Quanta Magazine","🔬 Science","https://www.quantamagazine.org","https://www.quantamagazine.org/feed/"],
+    ["Science News Explores","🔬 Science","https://www.snexplores.org","https://www.snexplores.org/feed",1],
+    ["Nature","🔬 Science","https://www.nature.com","https://www.nature.com/nature.rss",1],
+    ["New Scientist","🔬 Science","https://www.newscientist.com","https://feeds.newscientist.com/science-news",1],
     ["Android Authority","📱 Android","https://www.androidauthority.com","https://www.androidauthority.com/feed/"],
-    ["Farnam Street","🧠 Personal development","https://fs.blog","https://fs.blog/feed/"],
-    ["Four Minute Books","📚 Books","https://fourminutebooks.com","https://fourminutebooks.com/feed/"],
-    ["Ness Labs","🧠 Learning/thinking","https://nesslabs.com","https://nesslabs.com/feed"],
-    ["Lion's Roar","🪷 Buddhism","https://www.lionsroar.com","https://www.lionsroar.com/feed/"],
-    ["Mindful","🧘 Meditation","https://www.mindful.org","https://www.mindful.org/feed/"],
-    ["Mark's Daily Apple","❤️ Health & wellbeing","https://www.marksdailyapple.com","https://www.marksdailyapple.com/feed/"],
-    ["One Useful Thing","🤖 AI education","https://www.oneusefulthing.org","https://www.oneusefulthing.org/feed"],
-    ["Compound Interest","🧪 Chemistry education","https://www.compoundchem.com","https://www.compoundchem.com/feed/"],
-    ["ScienceDaily Chemistry","🧪 Chemistry discoveries","https://www.sciencedaily.com/news/matter_energy/chemistry/","https://www.sciencedaily.com/rss/matter_energy/chemistry.xml"]
+    ["Android Police","📱 Android","https://www.androidpolice.com","https://www.androidpolice.com/feed/",1],
+    ["Samsung Newsroom","📱 Android","https://news.samsung.com/global/","https://news.samsung.com/global/feed",1],
+    ["Farnam Street","🧠 Thinking & Growth","https://fs.blog","https://fs.blog/feed/"],
+    ["Ness Labs","🧠 Thinking & Growth","https://nesslabs.com","https://nesslabs.com/feed"],
+    ["Four Minute Books","🧠 Thinking & Growth","https://fourminutebooks.com","https://fourminutebooks.com/feed/"],
+    ["The Marginalian","🧠 Thinking & Growth","https://www.themarginalian.org","https://www.themarginalian.org/feed/",1],
+    ["The Power Moves","🧠 Thinking & Growth","https://thepowermoves.com","https://thepowermoves.com/feed/",1],
+    ["Book Summary Club","🧠 Thinking & Growth","https://booksummaryclub.com","https://booksummaryclub.com/feed/",1],
+    ["Lion's Roar","🧘 Mind & Body","https://www.lionsroar.com","https://www.lionsroar.com/feed/"],
+    ["Mindful","🧘 Mind & Body","https://www.mindful.org","https://www.mindful.org/feed/"],
+    ["Mark's Daily Apple","🧘 Mind & Body","https://www.marksdailyapple.com","https://www.marksdailyapple.com/feed/"]
   ];
-  var RETIRED=["https://thebuddhistsociety.org","https://www.uclahealth.org/programs/uclamindful","https://www.nhs.uk/better-health/","https://www.aiforeducation.io","https://edu.rsc.org","https://www.chemistryworld.com","https://www.health.harvard.edu","https://health.clevelandclinic.org"];
+  var RETIRED=["https://thebuddhistsociety.org","https://www.uclahealth.org/programs/uclamindful","https://www.nhs.uk/better-health/","https://www.aiforeducation.io","https://edu.rsc.org","https://www.chemistryworld.com","https://www.health.harvard.edu","https://health.clevelandclinic.org","https://www.justinguitar.com"];
   function seed(){
     S.sources=S.sources.filter(function(x){return RETIRED.indexOf(x.site)<0});
     S.items=S.items.filter(function(i){return S.sources.some(function(x){return x.url===i.src})});
     PRESETS.forEach(function(p){
-      var ex=S.sources.filter(function(s){return s.site===p[2]||s.url===p[3]})[0];
-      if(ex){ex.feedUrl=p[3];ex.site=p[2];return}
-      S.sources.push({url:p[3],feedUrl:p[3],site:p[2],name:p[0],cat:p[1]});
+      var ex=S.sources.filter(function(x){return x.site===p[2]||x.url===p[3]})[0];
+      if(ex){
+        ex.feedUrl=p[3];ex.site=p[2];ex.cat=p[1];
+        S.items.forEach(function(i){if(i.src===ex.url)i.cat=p[1]});
+        return;
+      }
+      if(S.dead.indexOf(p[2])>-1)return;
+      S.sources.push({url:p[3],feedUrl:p[3],site:p[2],name:p[0],cat:p[1],opt:!!p[4]});
     });
-    S.seeded=true;S.seedVer=6;save();
+    S.seeded=true;S.seedVer=7;save();
   }
   function id(i){return i.src+"|"+(i.link||i.title)}
   function status(t,err){var s=$("status");s.textContent=t||"";s.className="status"+(err?" err":"")}
@@ -240,17 +257,23 @@ details input,details select{width:100%;margin-top:4px}
   async function refresh(quiet){
     if(!S.sources.length){if(!quiet)status("Add a site first.");return}
     $("refresh").disabled=true;if(!quiet)status("Refreshing…");var fail=0;
-    var queue=S.sources.filter(function(x){return !x.demo}),done=0;
+    var queue=S.sources.filter(function(x){return !x.demo}),done=0,ok=0,optFail=[];
     async function worker(){
       while(queue.length){
         var src=queue.shift();
-        try{var its=await fetchItems(src);its.forEach(function(i){i.source=src.name});src.err=false;merge(src,its);save();render()}catch(e){fail++;src.err=true}
+        try{var its=await fetchItems(src);its.forEach(function(i){i.source=src.name});src.err=false;src.opt=false;ok++;merge(src,its);save();render()}catch(e){if(src.opt)optFail.push(src);else{fail++;src.err=true}}
         done++;if(!quiet)status("Refreshing… "+done+" of "+(done+queue.length));
       }
     }
     await Promise.all([worker(),worker(),worker()]);
+    var dropped=0;
+    if(ok&&optFail.length){
+      optFail.forEach(function(x){S.dead.push(x.site)});dropped=optFail.length;
+      S.sources=S.sources.filter(function(x){return optFail.indexOf(x)<0});
+      S.items=S.items.filter(function(i){return S.sources.some(function(x){return x.url===i.src})});
+    }
     save();render();$("refresh").disabled=false;
-    status(fail?fail+" failed: "+S.sources.filter(function(x){return x.err}).map(function(x){return x.name}).join(", "):"Updated "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),!!fail);
+    status(dropped&&!fail?"Updated. Skipped "+dropped+" candidate site(s) without a working feed.":fail?fail+" failed: "+S.sources.filter(function(x){return x.err}).map(function(x){return x.name}).join(", "):"Updated "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),!!fail);
   }
   function setAuto(){clearInterval(timer);if(+S.auto)timer=setInterval(function(){refresh(true)},S.auto*6e4)}
 
@@ -352,9 +375,9 @@ details input,details select{width:100%;margin-top:4px}
   $("theme").onclick=function(){var dark=S.theme?S.theme==="dark":matchMedia("(prefers-color-scheme:dark)").matches;S.theme=dark?"light":"dark";save();render()};
   $("view").onclick=function(){S.compact=!S.compact;save();render()};
   $("markAll").onclick=function(){S.items.forEach(function(i){if((!S.src||i.src===S.src)&&(!S.cat||i.cat===S.cat))S.read[id(i)]=1});save();render();status("Marked as read.")};
-  $("restore").onclick=function(){seed();render();refresh()};
+  $("restore").onclick=function(){S.dead=[];seed();render();refresh()};
   $("clear").onclick=function(){if(confirm("Remove all sources, saved posts and settings?")){try{localStorage.removeItem("dailyfeed")}catch(e){}S.sources=[];S.items=[];S.read={};S.saved={};S.src=S.cat=null;render();status("Reset.")}};
-  var first=S.seedVer!==6;if(first)seed();
+  var first=S.seedVer!==7;if(first)seed();
   setAuto();render();
   if(first||(S.sources.length&&!S.items.length))refresh();
 })();
