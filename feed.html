@@ -184,6 +184,7 @@ details input,details select{width:100%;margin-top:4px}
     var r=await fetchT("https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(s.feedUrl),12000);
     var j=await r.json();
     if(j.status!=="ok"||!j.items||!j.items.length)throw 0;
+    if(!s.name&&j.feed&&j.feed.title)s.name=j.feed.title.trim();
     return j.items.slice(0,30).map(function(i){
       var raw=i.description||i.content||"";
       return{src:s.url,source:s.name,cat:s.cat||"",title:(i.title||"").trim(),link:i.link||"",date:Date.parse((i.pubDate||"").replace(" ","T")+"Z")||Date.now(),sum:clean(raw),img:i.thumbnail||(i.enclosure&&i.enclosure.link)||"",mins:Math.max(1,Math.round(raw.replace(/<[^>]*>/g," ").split(/\s+/).length/220))};
@@ -237,21 +238,44 @@ details input,details select{width:100%;margin-top:4px}
   }
 
   async function addOne(input,cat){
+    var u0;try{u0=norm(input);new URL(u0)}catch(e){return"fail"}
     try{
       var r=await resolveFeed(input);
       if(S.sources.some(function(s){return s.feedUrl===r.feedUrl}))return"dup";
-      var src={url:r.feedUrl,feedUrl:r.feedUrl,name:"",cat:cat};
+      var src={url:r.feedUrl,feedUrl:r.feedUrl,site:u0,name:"",cat:cat};
       var p=parse(r.text,src);
       src.name=(p.title||new URL(r.feedUrl).hostname).trim();
       p.items.forEach(function(i){i.source=src.name});
       S.sources.push(src);merge(src,p.items);return"ok";
-    }catch(e){return"fail"}
+    }catch(e){}
+    var base=new URL(u0).origin,cands=[u0,base+"/feed",base+"/feed/",base+"/rss",base+"/rss.xml",base+"/feed.xml",base+"/atom.xml"];
+    for(var k=0;k<cands.length;k++){
+      var fu=cands[k];
+      if(S.sources.some(function(s){return s.feedUrl===fu}))return"dup";
+      var s2={url:fu,feedUrl:fu,site:u0,name:"",cat:cat};
+      try{
+        var its=await viaJson(s2);
+        s2.name=s2.name||new URL(fu).hostname;
+        its.forEach(function(i){i.source=s2.name});
+        S.sources.push(s2);merge(s2,its);return"ok";
+      }catch(e){}
+    }
+    return"fail";
   }
   async function addMany(text){
-    var urls=text.split(/[\s,]+/).filter(Boolean),cat=$("cat").value.trim(),ok=0,fail=0;
-    for(var i=0;i<urls.length;i++){status("Adding "+(i+1)+" of "+urls.length+"…");var r=await addOne(urls[i],cat);if(r==="ok")ok++;if(r==="fail")fail++}
+    var urls=text.split(/[\s,]+/).filter(Boolean),cat=$("cat").value.trim(),ok=0,dup=0,bad=[];
+    $("addBtn").disabled=true;
+    for(var i=0;i<urls.length;i++){
+      status("Adding "+(i+1)+" of "+urls.length+"…");
+      var r=await addOne(urls[i],cat);
+      if(r==="ok")ok++;else if(r==="dup")dup++;else bad.push(urls[i]);
+    }
+    $("addBtn").disabled=false;
     save();render();
-    status(ok+" added"+(fail?", "+fail+" failed (check URL or proxy in Settings; try the demo to preview)":"."),fail&&!ok);
+    var msg=ok+" added";
+    if(dup)msg+=", "+dup+" already in your list";
+    if(bad.length)msg+=". No feed found for: "+bad.join(", ")+". Try pasting the site's exact feed link (often ending in /feed or .xml).";
+    status(msg,bad.length>0&&!ok&&!dup);
   }
 
   async function refresh(quiet){
